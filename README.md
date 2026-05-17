@@ -1,64 +1,28 @@
-# Prodeazo (Prode Mundial 2026)
+# Prodeazo
 
-Esta app estará ideada para ser una plataforma de pronósticos y estadísticas de fútbol,
-comenzando por el Mundial 2026 y escalando luego a otros torneos.
-
-## ¿De qué va a tratar el proyecto?
-La plataforma va a permitir:
-- Ver fixtures y resultados en tiempo real.
-- Cargar predicciones de partidos.
-- Sumar puntos por aciertos.
-- Comparar usuarios en rankings generales y por ligas.
-- Consultar estadísticas de equipos, jugadores y partidos.
-
-## Features y módulos planeados
-
-### 1) Módulo core (MVP)
-- **Fixture**: listado de partidos y estados (pendiente, en vivo, finalizado).
-- **Predicciones**: carga de resultados antes del inicio del partido.
-- **Ranking general**: tabla de posiciones por puntos.
-- **Comparativa**: usuario vs usuario, partido por partido.
-- **Predicciones del torneo**: campeón/goleador y otros picks especiales.
-- **Perfil**: resumen personal (aciertos, puntos e historial).
-
-### 2) Miniligas y administración (segunda etapa)
-- **Miniligas privadas/públicas** con código de invitación.
-- **Ranking por miniliga**.
-- **Panel admin** para ajustes manuales (resultados, scoring, usuarios).
-
-### 3) Módulo estadísticas y expansión a otros torneos (tercera etapa)
-- **Grupos y llaves** del torneo activo.
-- **Goleadores, asistidores y métricas avanzadas**.
-- **Vista de partido** con eventos y datos enriquecidos.
-- **Perfiles de equipos y jugadores**.
-- **Base reutilizable para sumar nuevos torneos** (copas y ligas internacionales).
-
-## Stack (definición inicial)
-Esta app va a ser construida con:
-- **Next.js + TypeScript** para frontend y estructura principal.
-- **Supabase + PostgreSQL** para auth, base de datos y backend.
-- **Tailwind + NextUI** para interfaz visual.
-- **Bzzoiro BSD** como fuente principal de fixtures/resultados.
+Plataforma de pronósticos y estadísticas de fútbol (Mundial 2026, Premier League y más torneos vía selector).
 
 ## Desarrollo local
 
-Requiere [Docker Desktop](https://www.docker.com/products/docker-desktop/). No es obligatorio tener Node ni PostgreSQL instalados en tu máquina.
+**Guía paso a paso (rama, `envs/`, Docker, seed, frontend):** [DEVELOPMENT_GUIDE.md](./DEVELOPMENT_GUIDE.md)
 
-```bash
-# Copiar .env y configurar SESSION_SECRET como mínimo
-cp backend/.env.example backend/.env
+Resumen:
 
-# Build, migraciones y arranque
-docker compose up --build
-```
+1. Copiar `envs/back/.env` → `backend/.env` y `envs/front/.env` → `frontend/.env`
+2. `docker compose up -d` (API en `http://localhost:4000`)
+3. `docker compose run --rm --no-deps migrate pnpm seed`
+4. `cd frontend && npm run dev` → `http://localhost:3000`
 
-Las migraciones se ejecutan automáticamente. El backend queda disponible en `http://localhost:3000`.
+## Stack
 
-## Roadmap de alto nivel
-- **Fase 1 (MVP):** foco en predicciones + ranking.
-- **Fase 2:** miniligas y panel administrativo.
-- **Fase 3:** módulo estadístico completo y expansión multi-torneo.
+- **Frontend:** Next.js, TypeScript, Tailwind
+- **Backend:** Express, Drizzle, PostgreSQL, Redis
+- **Datos deportivos:** Bzzoiro API
+- **Infra local:** Docker Compose
 
-> Objetivo: la versión inicial estará ideada para terminarse antes del inicio del Mundial 2026,
-> y luego evolucionará como producto reusable para otros torneos.
+## Features (visión)
 
+- Fixtures y resultados por torneo
+- Predicciones y ranking
+- Miniligas con invitaciones
+- Auth (local + Google OAuth)
