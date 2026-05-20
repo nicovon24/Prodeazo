@@ -3,6 +3,7 @@ import { Router } from 'express'
 import passport, { isGoogleOAuthEnabled } from '../config/passport'
 import * as authController from '../controllers/auth.controller'
 import { asyncHandler } from '../utils/asyncHandler'
+import { requireAuth } from '../middleware/requireAuth'
 
 const router = Router()
 
@@ -34,5 +35,8 @@ router.post('/login', asyncHandler(authController.localLogin))
 router.post('/logout', asyncHandler(authController.logout))
 
 router.get('/me', asyncHandler(authController.me))
+router.patch('/me', requireAuth, asyncHandler(authController.updateProfile))
+router.delete('/me', requireAuth, asyncHandler(authController.deleteAccount))
+router.post('/change-password', requireAuth, asyncHandler(authController.changePassword))
 
 export default router

@@ -16,6 +16,7 @@ interface AuthState {
   login: (email: string, password: string) => Promise<void>
   register: (name: string, email: string, password: string) => Promise<void>
   logout: () => Promise<void>
+  setUser: (user: User | null) => void
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -25,8 +26,10 @@ export const useAuthStore = create<AuthState>((set) => ({
   fetchMe: async () => {
     try {
       const { user } = await apiFetch<{ user: User | null }>('/api/auth/me')
+      console.log('[AuthStore] fetchMe success:', !!user)
       set({ user, loading: false })
-    } catch {
+    } catch (err) {
+      console.error('[AuthStore] fetchMe error:', err)
       set({ user: null, loading: false })
     }
   },
@@ -36,6 +39,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       method: 'POST',
       body: JSON.stringify({ email, password }),
     })
+    console.log('[AuthStore] login success')
     set({ user, loading: false })
   },
 
@@ -51,4 +55,6 @@ export const useAuthStore = create<AuthState>((set) => ({
     await apiFetch('/api/auth/logout', { method: 'POST' })
     set({ user: null })
   },
+
+  setUser: (user) => set({ user }),
 }))

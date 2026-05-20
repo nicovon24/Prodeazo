@@ -2,9 +2,9 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "../../hooks/useAuth";
-import { Sidebar } from "../../components/layout/Sidebar";
-import { TournamentInitializer } from "../../components/TournamentInitializer";
+import { useAuth } from "@/hooks/useAuth";
+import { Sidebar } from "@/components/layout/Sidebar";
+import { TournamentInitializer } from "@/components/TournamentInitializer";
 
 export default function MainLayout({
   children,
@@ -16,6 +16,7 @@ export default function MainLayout({
 
   useEffect(() => {
     if (!loading && !user) {
+      console.log('[MainLayout] No user found, redirecting to /login');
       router.push("/login");
     }
   }, [user, loading, router]);

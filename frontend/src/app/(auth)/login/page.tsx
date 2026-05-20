@@ -4,10 +4,10 @@ import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { FormEvent, useEffect, useState } from 'react'
 import { Eye, EyeOff, Mail } from 'lucide-react'
-import { AuthInput, ErrorList, GoogleIcon } from '../../../components/AuthControls'
-import { AuthShell } from '../../../components/AuthShell'
-import { ApiError, apiUrl } from '../../../api/client'
-import { useAuth } from '../../../hooks/useAuth'
+import { AuthInput, ErrorList, GoogleIcon } from '@/components/AuthControls'
+import { AuthShell } from '@/components/AuthShell'
+import { ApiError, apiUrl } from '@/api/client'
+import { useAuth } from '@/hooks/useAuth'
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -42,7 +42,18 @@ export default function Login() {
   }
 
   useEffect(() => {
-    if (!loading && user) router.replace(getPostLoginRedirect())
+    if (!loading && user) {
+      const dest = getPostLoginRedirect();
+      console.log('[Login] User present, redirecting to:', dest);
+      
+      // Prevent loop if destination is the same
+      if (typeof window !== 'undefined' && window.location.pathname === dest) {
+        console.warn('[Login] Destination is same as current, skipping redirect to avoid loop');
+        return;
+      }
+      
+      router.replace(dest);
+    }
   }, [loading, router, user])
 
 
