@@ -6,7 +6,7 @@ import { alias } from 'drizzle-orm/pg-core'
 const homeTeam = alias(teams, 'home_team')
 const awayTeam = alias(teams, 'away_team')
 
-export function findFixturesWithTeams() {
+export function findFixturesWithTeams(tournamentId: string) {
   return db
     .select({
       id: fixtures.id,
@@ -31,6 +31,7 @@ export function findFixturesWithTeams() {
     .from(fixtures)
     .leftJoin(homeTeam, eq(fixtures.homeTeamId, homeTeam.id))
     .leftJoin(awayTeam, eq(fixtures.awayTeamId, awayTeam.id))
+    .where(eq(fixtures.tournamentId, tournamentId))
 }
 
 export function findFixtureStatusById(fixtureId: number) {

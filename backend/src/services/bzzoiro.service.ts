@@ -86,18 +86,11 @@ export async function fetchLiveScores() {
 }
 
 /**
- * League table for a season. Requires `BZZOIRO_LEAGUE_ID` (BSD league pk).
- * Optional season filter via `TOURNAMENT_ID` (BSD season pk).
+ * League table for a season.
  */
-export async function fetchStandings() {
-  const leagueId = process.env.BZZOIRO_LEAGUE_ID?.trim()
-  if (!leagueId) {
-    return { results: [], detail: 'Set BZZOIRO_LEAGUE_ID for standings' }
-  }
-  const rawSeason = process.env.TOURNAMENT_ID?.trim()
-  const season = rawSeason ? Number(rawSeason) : undefined
+export async function fetchStandings(leagueId: number, seasonId?: number) {
   return createClient().get<unknown>(
     `/v2/leagues/${leagueId}/standings/`,
-    season !== undefined && Number.isFinite(season) ? { season_id: season } : {}
+    seasonId !== undefined && Number.isFinite(seasonId) ? { season_id: seasonId } : {}
   )
 }

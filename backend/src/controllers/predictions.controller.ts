@@ -5,6 +5,7 @@ import * as predictionModel from '../models/prediction.model'
 import * as fixtureModel from '../models/fixture.model'
 import { paginate } from '../utils/paginate'
 import { err } from '../utils/apiError'
+import { resolveTournament } from '../utils/resolveTournament'
 
 const predictionSchema = z.object({
   fixtureId: z.number().int().positive(),
@@ -14,6 +15,17 @@ const predictionSchema = z.object({
 
 export async function list(req: Request, res: Response) {
   const userId = (req.user as any).id
+  const tournamentId = req.query.tournamentId as string | undefined
+
+  if (tournamentId) {
+    const tournament = await resolveTournament(tournamentId)
+    if (!tournament) {
+      return res.status(404).json(err('NOT_FOUND', 'Tournament not found'))
+    }
+    const userPredictions = await predictionModel.findPredictionsByUserIdAndTournament(userId, tournament.id)
+    return res.json(paginate(userPredictions, req))
+  }
+
   const userPredictions = await predictionModel.findPredictionsByUserId(userId)
   res.json(paginate(userPredictions, req))
 }

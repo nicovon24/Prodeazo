@@ -36,8 +36,11 @@ services:
       target: builder
     working_dir: /repo/backend
     command: pnpm db:push
+    env_file:
+      - ./backend/.env
     environment:
       DATABASE_URL: postgresql://postgres:postgres@db:5432/prodeazo
+
     depends_on:
       db:
         condition: service_healthy
@@ -50,7 +53,8 @@ services:
       target: runner
     # Host port (container stays on 4000). Default 3000 avoids common collisions on 4000; set BACKEND_HOST_PORT=4000 if you want that.
     ports:
-      - "${BACKEND_HOST_PORT:-3000}:4000"
+      - "${BACKEND_HOST_PORT:-4000}:4000"
+
     env_file:
       - path: ./backend/.env
         required: false
@@ -61,7 +65,8 @@ services:
       PORT: "4000"
       DATABASE_URL: postgresql://postgres:postgres@db:5432/prodeazo
       REDIS_URL: redis://redis:6379
-      SESSION_STORE: redis
+      SESSION_STORE: memory
+
     depends_on:
       db:
         condition: service_healthy

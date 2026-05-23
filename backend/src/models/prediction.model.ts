@@ -1,9 +1,25 @@
 import { db } from '../db/client'
-import { predictions } from '../db/schema'
+import { predictions, fixtures } from '../db/schema'
 import { and, eq } from 'drizzle-orm'
 
 export function findPredictionsByUserId(userId: string) {
   return db.select().from(predictions).where(eq(predictions.userId, userId))
+}
+
+export function findPredictionsByUserIdAndTournament(userId: string, tournamentId: string) {
+  return db
+    .select({
+      id: predictions.id,
+      userId: predictions.userId,
+      fixtureId: predictions.fixtureId,
+      homeGoals: predictions.homeGoals,
+      awayGoals: predictions.awayGoals,
+      points: predictions.points,
+      createdAt: predictions.createdAt,
+    })
+    .from(predictions)
+    .innerJoin(fixtures, eq(predictions.fixtureId, fixtures.id))
+    .where(and(eq(predictions.userId, userId), eq(fixtures.tournamentId, tournamentId)))
 }
 
 export function findPredictionByUserAndFixture(userId: string, fixtureId: number) {

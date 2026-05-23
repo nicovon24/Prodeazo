@@ -16,6 +16,7 @@ import fixturesRoutes from './routes/fixtures.routes'
 import predictionsRoutes from './routes/predictions.routes'
 import leaderboardRoutes from './routes/leaderboard.routes'
 import miniLeaguesRoutes from './routes/mini-leagues.routes'
+import tournamentsRoutes from './routes/tournaments.routes'
 
 const app = express()
 const PORT = process.env.PORT || 4000
@@ -48,7 +49,13 @@ if (useMemorySessions) {
 }
 
 app.use(helmet())
-app.use(cors({ origin: process.env.FRONTEND_URL || 'http://localhost:5173', credentials: true }))
+app.use(
+  cors({
+    origin: ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:5173'],
+    credentials: true,
+  })
+)
+
 // app.use(globalLimiter)
 
 app.use((_req, res, next) => {
@@ -72,8 +79,9 @@ app.use(
     secret: sessionSecret,
     resave: false,
     saveUninitialized: false,
-    cookie: { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', maxAge: 7 * 24 * 60 * 60 * 1000 },
+    cookie: { httpOnly: true, sameSite: 'lax', secure: false, maxAge: 7 * 24 * 60 * 60 * 1000 },
   })
+
 )
 
 app.use(passport.initialize())
@@ -86,6 +94,7 @@ app.use('/api/mini-leagues', miniLeaguesRoutes)
 app.use('/api/fixtures', fixturesRoutes)
 app.use('/api/predictions', predictionsRoutes)
 app.use('/api/leaderboard', leaderboardRoutes)
+app.use('/api/tournaments', tournamentsRoutes)
 
 app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error(err)

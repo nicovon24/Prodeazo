@@ -38,11 +38,24 @@ if (googleClientId && googleClientSecret) {
             return done(null, existing[0])
           }
 
+          const email = profile.emails?.[0]?.value || `google_${profile.id}@noemail.invalid`
+
+          // If a local account with the same email exists, link it to Google
+          const [byEmail] = await db.select().from(users).where(eq(users.email, email)).limit(1)
+          if (byEmail) {
+            const [updated] = await db
+              .update(users)
+              .set({ googleId: profile.id, avatar: byEmail.avatar ?? profile.photos?.[0]?.value, authProvider: 'google' })
+              .where(eq(users.id, byEmail.id))
+              .returning()
+            return done(null, updated)
+          }
+
           const [newUser] = await db
             .insert(users)
             .values({
               googleId: profile.id,
-              email: profile.emails?.[0]?.value || `google_${profile.id}@noemail.invalid`,
+              email,
               name: profile.displayName,
               avatar: profile.photos?.[0]?.value,
             })

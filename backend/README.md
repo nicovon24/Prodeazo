@@ -183,7 +183,33 @@ Lists all teams. Paginated response.
 
 ---
 
+### Tournaments (`/api/tournaments`) — session required
+
+#### `GET /api/tournaments`
+
+Lists all active tournaments.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string (cuid) | Tournament ID. |
+| `name` | string | Full name (e.g. "FIFA World Cup 2026"). |
+| `shortName` | string \| null | Short name (e.g. "WC 2026"). |
+| `leagueId` | number | Bzzoiro league ID. |
+| `seasonIds` | string | Comma-separated season IDs. |
+| `isDefault` | boolean | Whether this is the default tournament. |
+| `active` | boolean | Whether the tournament is active. |
+
+#### `GET /api/tournaments/:id`
+
+Single tournament by ID.
+
+- **404** if not found.
+
+---
+
 ### Fixtures (`/api/fixtures`) — no auth
+
+All fixture endpoints accept an optional `?tournamentId=<id>` query param to scope results to a specific tournament. If omitted, the default tournament is used.
 
 #### `GET /api/fixtures`
 
@@ -192,15 +218,14 @@ Lists matches stored in Postgres. Paginated response.
 | Field | Type | Description |
 |-------|------|-------------|
 | `id` | number | Event ID. |
-| `homeTeamId` | number \| null | FK to `teams`. |
-| `awayTeamId` | number \| null | FK to `teams`. |
-| `homeTeamName` | string \| null | Home team name. |
-| `awayTeamName` | string \| null | Away team name. |
 | `date` | string (ISO) | Kick-off time. |
 | `round` | string \| null | Phase label. |
-| `status` | string | `not_started`, `in_progress`, `finished`, etc. |
+| `groupLabel` | string \| null | Group label (e.g. "Group A"). |
+| `status` | string | `not_started`, `in_progress`, `finished`, `postponed`, `cancelled`. |
 | `homeScore` | number \| null | Home goals. |
 | `awayScore` | number \| null | Away goals. |
+| `homeTeam` | object \| null | `{ id, name, shortName, logoUrl }` |
+| `awayTeam` | object \| null | `{ id, name, shortName, logoUrl }` |
 
 #### `GET /api/fixtures/live`
 
@@ -266,9 +291,9 @@ Global ranking of all users by total points. Paginated response.
 
 ---
 
-### Mini leagues (`/api/mini-leagues`) — session required
+### Mini leagues (`/api/mini-leagues`) — session required (except where noted)
 
-Private user groups with their own leaderboard. Each league has a unique 8-character invite code.
+Private user groups with their own leaderboard. Each league has a static 8-character invite code and can also generate shareable invite links that expire after 7 days.
 
 #### `POST /api/mini-leagues`
 
@@ -281,6 +306,7 @@ Creates a league. The creator becomes `owner`.
 ```
 
 - **201** — League created with `id` and `inviteCode`.
+- **500** — `INTERNAL_ERROR` — DB insert failed.
 
 #### `GET /api/mini-leagues/mine`
 
@@ -307,7 +333,7 @@ League detail with member list.
 
 #### `POST /api/mini-leagues/join` or `POST /api/mini-leagues/:id/join`
 
-Join a league with the invite code.
+Join a league with the static invite code.
 
 **JSON body**
 
@@ -318,6 +344,10 @@ Join a league with the invite code.
 - **201** — Joined successfully.
 - **404** — Invalid code.
 - **409** — Already a member.
+
+#### `DELETE /api/mini-leagues/:id`
+
+Delete a league (owner only). Deletes all members atomically.
 
 #### `DELETE /api/mini-leagues/:id/leave`
 
@@ -342,6 +372,46 @@ Member ranking for the league. Members only. Paginated response with `rank`.
   ]
 }
 ```
+
+---
+
+#### Invite links
+
+##### `GET /api/mini-leagues/invite/:token` — **no auth required**
+
+Returns public info about the league for a given invite token. Used to show the league name before the user logs in.
+
+- **200**:
+  ```json
+  { "id": "...", "name": "Los Cracks", "expiresAt": "2026-05-22T15:00:00.000Z" }
+  ```
+- **404** — `NOT_FOUND` — token not found or expired.
+
+##### `POST /api/mini-leagues/:id/invite` — owner only
+
+Generates a new invite link for the league (expires in **7 days**). Invalidates the previous token if one existed.
+
+- **200**:
+  ```json
+  { "token": "abc123...", "expiresAt": "2026-05-22T15:00:00.000Z" }
+  ```
+- **403** — `FORBIDDEN` — requester is not the owner.
+- **404** — `NOT_FOUND` — league not found.
+
+##### `POST /api/mini-leagues/join-by-token` — session required
+
+Join a league using an invite link token.
+
+**JSON body**
+
+```json
+{ "token": "abc123..." }
+```
+
+- **201** — Joined successfully: `{ "league": { "id", "name" }, "member": { ... } }`
+- **400** — `VALIDATION_ERROR` — token missing.
+- **404** — `NOT_FOUND` — token not found or expired.
+- **409** — `CONFLICT` — already a member.
 
 ---
 

@@ -15,6 +15,13 @@
       "when": 1779206400000,
       "tag": "0001_drop_players",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1778809249676,
+      "tag": "0002_familiar_landau",
+      "breakpoints": true
     }
   ]
 }

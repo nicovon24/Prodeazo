@@ -1,5 +1,5 @@
 import { FixtureStatus } from '../constants/fixture-status'
-import { pgTable, text, integer, timestamp, unique } from 'drizzle-orm/pg-core'
+import { pgTable, text, integer, timestamp, unique, boolean } from 'drizzle-orm/pg-core'
 import { createId } from '@paralleldrive/cuid2'
 
 export const teams = pgTable('teams', {
@@ -15,8 +15,11 @@ export const miniLeagues = pgTable('mini_leagues', {
   id: text('id').primaryKey().$defaultFn(() => createId()),
   name: text('name').notNull(),
   inviteCode: text('invite_code').unique().notNull().$defaultFn(() => createId().slice(0, 8).toUpperCase()),
+  inviteToken: text('invite_token').unique(),
+  inviteExpiresAt: timestamp('invite_expires_at'),
   creatorId: text('creator_id').notNull(),
   createdAt: timestamp('created_at').defaultNow(),
+  tournamentId: text('tournament_id').references(() => tournaments.id),
 })
 
 export const miniLeagueMembers = pgTable(
@@ -30,6 +33,17 @@ export const miniLeagueMembers = pgTable(
   },
   (t) => [unique().on(t.leagueId, t.userId)]
 )
+
+export const tournaments = pgTable('tournaments', {
+  id: text('id').primaryKey().$defaultFn(() => createId()),
+  name: text('name').notNull(),
+  shortName: text('short_name'),
+  leagueId: integer('league_id').notNull(),
+  seasonIds: text('season_ids').notNull(),
+  isDefault: boolean('is_default').notNull().default(false),
+  active: boolean('active').notNull().default(true),
+  createdAt: timestamp('created_at').defaultNow(),
+})
 
 export const fixtures = pgTable('fixtures', {
   id: integer('id').primaryKey(),
@@ -47,6 +61,7 @@ export const fixtures = pgTable('fixtures', {
   status: text('status').default(FixtureStatus.NotStarted),
   homeScore: integer('home_score'),
   awayScore: integer('away_score'),
+  tournamentId: text('tournament_id').references(() => tournaments.id),
 })
 
 export const users = pgTable('users', {

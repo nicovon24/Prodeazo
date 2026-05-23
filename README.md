@@ -61,3 +61,4 @@ Las migraciones se ejecutan automáticamente. El backend queda disponible en `ht
 
 > Objetivo: la versión inicial estará ideada para terminarse antes del inicio del Mundial 2026,
 > y luego evolucionará como producto reusable para otros torneos.
+
