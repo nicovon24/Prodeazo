@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1777950382843,
+      "tag": "0000_flippant_roulette",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1779206400000,
+      "tag": "0001_drop_players",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1778809249676,
+      "tag": "0002_familiar_landau",
+      "breakpoints": true
+    }
+  ]
+}

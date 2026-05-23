@@ -1,0 +1,42 @@
+@import "tailwindcss";
+@import "@heroui/styles";
+
+@theme {
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-montserrat), sans-serif;
+
+  --color-primary: #AFE805;
+  --color-secondary: #033F2D;
+  --color-tertiary-blue: #001AAC;
+  --color-tertiary-red: #D50204;
+}
+
+:root {
+  --color-primary: #AFE805;
+  --color-secondary: #033F2D;
+  --color-tertiary-blue: #001AAC;
+  --color-tertiary-red: #D50204;
+  --color-green-normal: #00CE17;
+}
+
+*::selection {
+  background: var(--color-primary);
+  color: var(--color-secondary);
+}
+
+*::-moz-selection {
+  background: var(--color-primary);
+  color: var(--color-secondary);
+}
+
+.text-primary { color: var(--color-primary); }
+.bg-primary { background-color: var(--color-primary); }
+.border-primary\/40 { border-color: rgba(175, 232, 5, 0.4); }
+.text-primary\/70 { color: rgba(175, 232, 5, 0.7); }
+.text-green-normal { color: var(--color-green-normal); }
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}

@@ -40,10 +40,25 @@ Esta app va a ser construida con:
 - **Tailwind + NextUI** para interfaz visual.
 - **Bzzoiro BSD** como fuente principal de fixtures/resultados.
 
+## Desarrollo local
+
+Requiere [Docker Desktop](https://www.docker.com/products/docker-desktop/). No es obligatorio tener Node ni PostgreSQL instalados en tu máquina.
+
+```bash
+# Copiar .env y configurar SESSION_SECRET como mínimo
+cp backend/.env.example backend/.env
+
+# Build, migraciones y arranque
+docker compose up --build
+```
+
+Las migraciones se ejecutan automáticamente. El backend queda disponible en `http://localhost:3000`.
+
 ## Roadmap de alto nivel
 - **Fase 1 (MVP):** foco en predicciones + ranking.
 - **Fase 2:** miniligas y panel administrativo.
 - **Fase 3:** módulo estadístico completo y expansión multi-torneo.
 
 > Objetivo: la versión inicial estará ideada para terminarse antes del inicio del Mundial 2026,
-y luego evolucionará como producto reusable para otros torneos.
+> y luego evolucionará como producto reusable para otros torneos.
+

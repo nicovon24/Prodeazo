@@ -1,0 +1,86 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: prodeazo
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  migrate:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+      target: builder
+    working_dir: /repo/backend
+    command: pnpm db:push
+    env_file:
+      - ./backend/.env
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/prodeazo
+
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: no
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+      target: runner
+    # Host port (container stays on 4000). Default 3000 avoids common collisions on 4000; set BACKEND_HOST_PORT=4000 if you want that.
+    ports:
+      - "${BACKEND_HOST_PORT:-4000}:4000"
+
+    env_file:
+      - path: ./backend/.env
+        required: false
+      - path: ./backend/.env.local
+        required: false
+    environment:
+      NODE_ENV: production
+      PORT: "4000"
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/prodeazo
+      REDIS_URL: redis://redis:6379
+      SESSION_STORE: memory
+
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:4000/api/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+volumes:
+  postgres_data:
+  redis_data:
