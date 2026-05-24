@@ -1,5 +1,9 @@
+import { setDefaultResultOrder } from 'node:dns'
 import { config as loadEnv } from 'dotenv'
 import { resolve } from 'node:path'
+
+// Force IPv4 to avoid ENETUNREACH on hosts that resolve to IPv6 (e.g. Render)
+setDefaultResultOrder('ipv4first')
 
 const backendRoot = resolve(__dirname, '..')
 
