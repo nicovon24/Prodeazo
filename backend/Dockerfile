@@ -1,42 +1,31 @@
+# Build context: backend/ (Render Root Directory = backend, or docker compose context: ./backend)
 FROM node:20-alpine AS builder
 
-WORKDIR /repo
+WORKDIR /app
 
-RUN corepack enable && corepack prepare pnpm@10.33.2 --activate
+# bcrypt native bindings
+RUN apk add --no-cache python3 make g++
 
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY package.json tsconfig.json drizzle.config.ts ./
+RUN npm install
 
-COPY backend/package.json ./backend/
+COPY src ./src/
+COPY drizzle ./drizzle/
 
-RUN pnpm install --frozen-lockfile --filter backend...
-
-COPY backend/tsconfig.json backend/drizzle.config.ts ./backend/
-
-COPY backend/src ./backend/src/
-
-COPY backend/drizzle ./backend/drizzle/
-
-RUN pnpm --filter backend run build
-
-WORKDIR /repo/backend
+RUN npm run build && npm prune --omit=dev
 
 # ─── runner ──────────────────────────────────────────────────────────────────
 
 FROM node:20-alpine AS runner
 
-WORKDIR /repo
+WORKDIR /app
 
-RUN corepack enable && corepack prepare pnpm@10.33.2 --activate
+ENV NODE_ENV=production
+ENV PORT=4000
 
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-
-COPY backend/package.json ./backend/
-
-RUN pnpm install --frozen-lockfile --prod --filter backend...
-
-COPY --from=builder /repo/backend/dist ./backend/dist
-
-WORKDIR /repo/backend
+COPY --from=builder /app/package.json ./
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/dist ./dist
 
 EXPOSE 4000
 
