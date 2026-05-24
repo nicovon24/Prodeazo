@@ -31,11 +31,11 @@ services:
 
   migrate:
     build:
-      context: .
-      dockerfile: backend/Dockerfile
+      context: ./backend
+      dockerfile: Dockerfile
       target: builder
-    working_dir: /repo/backend
-    command: pnpm db:push
+    working_dir: /app
+    command: npm run db:push
     env_file:
       - ./backend/.env
     environment:
@@ -48,8 +48,8 @@ services:
 
   backend:
     build:
-      context: .
-      dockerfile: backend/Dockerfile
+      context: ./backend
+      dockerfile: Dockerfile
       target: runner
     # Host port (container stays on 4000). Default 3000 avoids common collisions on 4000; set BACKEND_HOST_PORT=4000 if you want that.
     ports:
