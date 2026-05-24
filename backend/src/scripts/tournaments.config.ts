@@ -14,11 +14,4 @@ export const TOURNAMENTS: TournamentSeedConfig[] = [
     seasonId: '188',
     isDefault: true,
   },
-  {
-    name: 'Premier League 2025/26',
-    shortName: 'PL2526',
-    leagueId: '1',
-    seasonId: '337',
-    isDefault: false,
-  },
 ]

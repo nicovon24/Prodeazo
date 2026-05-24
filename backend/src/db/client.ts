@@ -6,6 +6,7 @@ import * as schema from './schema'
 export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   connectionTimeoutMillis: Number(process.env.PG_CONNECTION_TIMEOUT_MS) || 15_000,
+  ssl: process.env.DATABASE_URL?.includes('supabase') ? { rejectUnauthorized: false } : undefined,
 })
 
 export const db = drizzle(pool, { schema })
