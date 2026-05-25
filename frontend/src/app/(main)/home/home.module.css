@@ -115,6 +115,39 @@
   color: rgba(255, 255, 255, 0.5);
 }
 
+.statNeutralIndicator {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.statNeutralLabel {
+  font-size: 0.65rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.leagueEmptyText {
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.65);
+  max-width: 220px;
+}
+
+.leagueEmptyLink {
+  color: var(--color-primary, #afe805);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.leagueEmptyLink:hover {
+  color: #fff;
+}
+
 .statUpIndicator {
   display: flex;
   align-items: center;

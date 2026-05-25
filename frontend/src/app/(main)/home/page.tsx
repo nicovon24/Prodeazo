@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   Globe,
@@ -7,20 +8,46 @@ import {
   BarChart2,
   CalendarDays,
   CheckCircle,
-  ChevronUp,
   ChevronRight,
   ArrowRight,
-  Trophy,
 } from "lucide-react";
 import { useAuth } from "../../../hooks/useAuth";
 import { Header } from "../../../components/layout/Header";
-import { useTournamentStore } from "../../../store/useTournamentStore";
+import { fetchDashboardMe, type DashboardMe } from "../../../api/dashboard";
 import styles from "./home.module.css";
+
+function formatCount(n: number): string {
+  return n.toLocaleString("es-AR");
+}
 
 export default function HomePage() {
   const { user } = useAuth();
-  const { tournaments, activeTournamentId, setActiveTournament } = useTournamentStore();
-  const activeTournament = tournaments.find(t => t.id === activeTournamentId);
+  const [dashboard, setDashboard] = useState<DashboardMe | null>(null);
+  const [loadingStats, setLoadingStats] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoadingStats(true);
+    fetchDashboardMe()
+      .then((data) => {
+        if (!cancelled) setDashboard(data);
+      })
+      .catch(() => {
+        if (!cancelled) setDashboard(null);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingStats(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const participantCount = dashboard?.participantCount ?? 0;
+  const globalRank = dashboard?.globalRank ?? 1;
+  const totalPoints = dashboard?.totalPoints ?? 0;
+  const correctPredictions = dashboard?.correctPredictions ?? 0;
+  const precision = dashboard?.precision ?? 0;
 
   return (
     <>
@@ -29,26 +56,6 @@ export default function HomePage() {
         subtitle={`Bienvenido de vuelta, ${user?.name ?? "Usuario"}. Este es tu resumen.`}
       />
       <main className={styles.main}>
-        {/* Tournament selector */}
-        {tournaments.length > 1 && (
-          <div className={styles.tournamentBar}>
-            <span className={styles.tournamentBarLabel}>
-              <Trophy className={styles.tournamentBarIcon} />
-              Torneo activo:
-            </span>
-            <div className={styles.tournamentTabs}>
-              {tournaments.map(t => (
-                <button
-                  key={t.id}
-                  className={`${styles.tournamentTab} ${t.id === activeTournamentId ? styles.tournamentTabActive : ''}`}
-                  onClick={() => setActiveTournament(t.id)}
-                >
-                  {t.shortName ?? t.name}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
         {/* Top Stat Cards */}
         <div className={styles.statsRow}>
           {/* Global Pos */}
@@ -59,15 +66,18 @@ export default function HomePage() {
             </div>
             <div className={styles.statCardBody}>
               <div>
-                <div className={styles.statMainValue}>1.248°</div>
-                <div className={styles.statSubLabel}>de 25.430 participantes</div>
-              </div>
-              <div className={styles.statUpIndicator}>
-                <ChevronUp className="w-4 h-4" />
-                <div className={styles.statUpText}>
-                  <span>256</span>
-                  <div className={styles.statUpLabel}>vs. semana pasada</div>
+                <div className={styles.statMainValue}>
+                  {loadingStats ? "—" : `${globalRank}°`}
                 </div>
+                <div className={styles.statSubLabel}>
+                  {loadingStats
+                    ? "Cargando…"
+                    : `de ${formatCount(participantCount)} participantes`}
+                </div>
+              </div>
+              <div className={styles.statNeutralIndicator}>
+                <span>0</span>
+                <div className={styles.statNeutralLabel}>vs. semana pasada</div>
               </div>
             </div>
             <div className={styles.statCardFooter}>
@@ -84,16 +94,12 @@ export default function HomePage() {
               Mi posición en ligas
             </div>
             <div className={styles.statCardBody}>
-              <div>
-                <div className={styles.statMainValue}>2°</div>
-                <div className={styles.statSubLabel}>de 12</div>
-              </div>
-              <div className={styles.leagueBadge}>
-                <div className={styles.leagueBadgeText}>Liga Amigos</div>
-                <div className={styles.leagueBadgeIcon}>
-                  <Users className="w-5 h-5" />
-                </div>
-              </div>
+              <p className={styles.leagueEmptyText}>
+                Aún no te uniste a ninguna liga.{" "}
+                <Link href="/leagues" className={styles.leagueEmptyLink}>
+                  ¡Busca una liga!
+                </Link>
+              </p>
             </div>
             <div className={styles.statCardFooter}>
               <Link href="/leagues" className={styles.statCardButton}>
@@ -112,15 +118,21 @@ export default function HomePage() {
               <div className={styles.statsGrid}>
                 <div className={styles.statsGridItem}>
                   <span className={styles.statsGridLabel}>Puntos Totales</span>
-                  <span className={styles.statsGridValue}>1.250</span>
+                  <span className={styles.statsGridValue}>
+                    {loadingStats ? "—" : formatCount(totalPoints)}
+                  </span>
                 </div>
                 <div className={styles.statsGridItem}>
                   <span className={styles.statsGridLabel}>Partidos Acertados</span>
-                  <span className={styles.statsGridValue}>18</span>
+                  <span className={styles.statsGridValue}>
+                    {loadingStats ? "—" : formatCount(correctPredictions)}
+                  </span>
                 </div>
                 <div className={styles.statsGridItem}>
                   <span className={styles.statsGridLabel}>Precisión</span>
-                  <span className={styles.statsGridValue}>62%</span>
+                  <span className={styles.statsGridValue}>
+                    {loadingStats ? "—" : `${precision}%`}
+                  </span>
                 </div>
               </div>
             </div>
@@ -132,7 +144,7 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Content Panels */}
+        {/* Content Panels — paso 3: datos reales */}
         <div className={styles.panelsRow}>
           {/* Próximos Partidos */}
           <div className={styles.panel}>
