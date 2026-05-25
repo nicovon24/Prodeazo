@@ -63,6 +63,7 @@ if (googleClientId && googleClientSecret) {
 
           done(null, newUser)
         } catch (err) {
+          console.error('[passport] Google OAuth strategy error:', err)
           done(err as Error)
         }
       }
