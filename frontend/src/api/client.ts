@@ -1,4 +1,4 @@
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? ''
 
 export interface PaginatedResponse<T> {
   count: number
@@ -30,6 +30,11 @@ export function apiUrl(path: string) {
   return `${API_BASE_URL}${path}`
 }
 
+function getToken(): string | null {
+  if (typeof window === 'undefined') return null
+  return localStorage.getItem('auth_token')
+}
+
 export async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
   const headers = new Headers(options.headers)
 
@@ -37,13 +42,21 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
     headers.set('Content-Type', 'application/json')
   }
 
+  const token = getToken()
+  if (token) {
+    headers.set('Authorization', `Bearer ${token}`)
+  }
+
   const res = await fetch(apiUrl(path), {
     ...options,
-    credentials: 'include',
     headers,
   })
 
   if (!res.ok) {
+    if (res.status === 401 && typeof window !== 'undefined') {
+      localStorage.removeItem('auth_token')
+    }
+
     let payload: ApiErrorPayload | null = null
 
     try {

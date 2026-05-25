@@ -3,8 +3,11 @@ import { Router } from 'express'
 import passport, { isGoogleOAuthEnabled } from '../config/passport'
 import * as authController from '../controllers/auth.controller'
 import { asyncHandler } from '../utils/asyncHandler'
+import { requireAuth } from '../middleware/requireAuth'
 
 const router = Router()
+
+const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000'
 
 const requireGoogleOAuth: RequestHandler = (_req, res, next) => {
   if (!isGoogleOAuthEnabled) {
@@ -19,23 +22,26 @@ const requireGoogleOAuth: RequestHandler = (_req, res, next) => {
 router.get(
   '/google',
   requireGoogleOAuth,
-  passport.authenticate('google', { scope: ['profile', 'email'] })
+  passport.authenticate('google', { scope: ['profile', 'email'], session: false })
 )
 
 router.get(
   '/callback',
   requireGoogleOAuth,
   passport.authenticate('google', {
-    failureRedirect: `${process.env.FRONTEND_URL}/login`,
+    failureRedirect: `${frontendUrl}/login`,
     failureMessage: true,
+    session: false,
   }),
   authController.oauthCallbackSuccess
 )
 
+router.get('/exchange', asyncHandler(authController.exchangeCode))
+
 router.post('/register', asyncHandler(authController.register))
 router.post('/login', asyncHandler(authController.localLogin))
-router.post('/logout', asyncHandler(authController.logout))
+router.post('/logout', requireAuth, asyncHandler(authController.logout))
 
-router.get('/me', asyncHandler(authController.me))
+router.get('/me', requireAuth, asyncHandler(authController.me))
 
 export default router
