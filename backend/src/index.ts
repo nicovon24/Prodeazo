@@ -65,13 +65,18 @@ const secureCookie =
   process.env.COOKIE_SECURE === 'true' ||
   (process.env.COOKIE_SECURE !== 'false' && process.env.NODE_ENV === 'production')
 
+// sameSite='none' is required for cross-origin cookie sending (e.g. Vercel frontend → Render backend).
+// It only works with secure:true (HTTPS), so we apply it only when the cookie is already secure.
+// On local HTTP (secure:false) we fall back to 'lax', which works fine for same-hostname ports.
+const sameSiteCookie = secureCookie ? 'none' : 'lax'
+
 app.use(
   cookieSession({
     name: 'session',
     secret: sessionSecret,
     maxAge: 7 * 24 * 60 * 60 * 1000,
     httpOnly: true,
-    sameSite: 'lax',
+    sameSite: sameSiteCookie,
     secure: secureCookie,
   })
 )
