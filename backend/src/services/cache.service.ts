@@ -18,3 +18,7 @@ export function getCache<T>(key: string): T | null {
 export function setCache(key: string, value: unknown, ttlSeconds: number): void {
   store.set(key, { value, expiresAt: Date.now() + ttlSeconds * 1000 })
 }
+
+export function deleteCache(key: string): void {
+  store.delete(key)
+}

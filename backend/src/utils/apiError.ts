@@ -5,6 +5,7 @@ export type ErrorCode =
   | 'NOT_FOUND'
   | 'CONFLICT'
   | 'INTERNAL_ERROR'
+  | 'BAD_REQUEST'
 
 export function err(code: ErrorCode, message: string) {
   return { error: { code, message } }

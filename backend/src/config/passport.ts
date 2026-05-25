@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto'
 import passport from 'passport'
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20'
 import type { Profile } from 'passport-google-oauth20'
@@ -6,12 +7,32 @@ import bcrypt from 'bcrypt'
 import { db } from '../db/client'
 import { users } from '../db/schema'
 import { eq } from 'drizzle-orm'
+import { getCache, setCache, deleteCache } from '../services/cache.service'
 
 const googleClientId = process.env.GOOGLE_CLIENT_ID?.trim()
 const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET?.trim()
 
 /** Set when real Google OAuth credentials exist (not placeholders). */
 export const isGoogleOAuthEnabled = Boolean(googleClientId && googleClientSecret)
+
+/**
+ * Stateless OAuth CSRF state store backed by the in-memory cache (no session needed).
+ * Stores a random UUID → validates it on callback → deletes it after use.
+ * Each state entry lives 10 minutes (typical OAuth round-trip is < 2 min).
+ */
+const oauthStateStore = {
+  store(_req: Express.Request, cb: (err: unknown, state: string) => void) {
+    const state = randomUUID()
+    setCache(`oauth_state:${state}`, true, 10 * 60)
+    cb(null, state)
+  },
+  verify(_req: Express.Request, state: string, cb: (err: unknown, ok: boolean) => void) {
+    const valid = getCache<boolean>(`oauth_state:${state}`)
+    if (!valid) return cb(null, false)
+    deleteCache(`oauth_state:${state}`)
+    cb(null, true)
+  },
+}
 
 if (googleClientId && googleClientSecret) {
   passport.use(
@@ -20,6 +41,7 @@ if (googleClientId && googleClientSecret) {
         clientID: googleClientId,
         clientSecret: googleClientSecret,
         callbackURL: process.env.GOOGLE_CALLBACK_URL || '/api/auth/callback',
+        store: oauthStateStore as any,
       },
       async (
         _accessToken: string,
@@ -61,6 +83,8 @@ if (googleClientId && googleClientSecret) {
             })
             .returning()
 
+          if (!newUser) return done(new Error('Insert returned no user'))
+
           done(null, newUser)
         } catch (err) {
           console.error('[passport] Google OAuth strategy error:', err)
@@ -85,16 +109,5 @@ passport.use(
     }
   })
 )
-
-passport.serializeUser((user: any, done) => done(null, user.id))
-
-passport.deserializeUser(async (id: string, done) => {
-  try {
-    const [user] = await db.select().from(users).where(eq(users.id, id)).limit(1)
-    done(null, user ?? null)
-  } catch (err) {
-    done(err)
-  }
-})
 
 export default passport

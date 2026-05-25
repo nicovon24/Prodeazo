@@ -2,7 +2,6 @@ import './env'
 import express from 'express'
 import { randomUUID } from 'node:crypto'
 import { runScoreSync } from './jobs/score-sync'
-import cookieSession from 'cookie-session'
 import cors from 'cors'
 import morgan from 'morgan'
 import helmet from 'helmet'
@@ -22,14 +21,6 @@ const PORT = process.env.PORT || 4000
 // const globalLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 200, standardHeaders: true, legacyHeaders: false })
 // const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, standardHeaders: true, legacyHeaders: false })
 
-const sessionSecret =
-  process.env.SESSION_SECRET ||
-  (process.env.NODE_ENV === 'production' ? '' : 'dev-session-secret-not-for-production')
-
-if (!sessionSecret) {
-  throw new Error('SESSION_SECRET is required in production')
-}
-
 app.use(helmet())
 const allowedOrigins = [
   'http://localhost:3000',
@@ -42,7 +33,7 @@ const allowedOrigins = [
 app.use(
   cors({
     origin: allowedOrigins,
-    credentials: true,
+    credentials: false,
   })
 )
 
@@ -61,41 +52,8 @@ app.use(morgan(morganFormat))
 
 app.use(express.json())
 
-const secureCookie =
-  process.env.COOKIE_SECURE === 'true' ||
-  (process.env.COOKIE_SECURE !== 'false' && process.env.NODE_ENV === 'production')
-
-// sameSite='none' is required for cross-origin cookie sending (e.g. Vercel frontend → Render backend).
-// It only works with secure:true (HTTPS), so we apply it only when the cookie is already secure.
-// On local HTTP (secure:false) we fall back to 'lax', which works fine for same-hostname ports.
-const sameSiteCookie = secureCookie ? 'none' : 'lax'
-
-app.use(
-  cookieSession({
-    name: 'session',
-    secret: sessionSecret,
-    maxAge: 7 * 24 * 60 * 60 * 1000,
-    httpOnly: true,
-    sameSite: sameSiteCookie,
-    secure: secureCookie,
-  })
-)
-
-// Passport >=0.6 calls req.session.regenerate() and req.session.save(), but
-// cookie-session never implemented them. Shim them as no-ops so the two libs
-// can coexist without switching to express-session.
-app.use((req, _res, next) => {
-  if (req.session && !req.session.regenerate) {
-    req.session.regenerate = (cb: (err?: unknown) => void) => cb()
-  }
-  if (req.session && !req.session.save) {
-    req.session.save = (cb: (err?: unknown) => void) => cb()
-  }
-  next()
-})
-
+// Passport only for OAuth strategy — no session middleware needed with JWT auth
 app.use(passport.initialize())
-app.use(passport.session())
 
 app.get('/api/health', (_req, res) => res.json({ ok: true }))
 app.use('/api/auth', /* authLimiter, */ authRoutes)
