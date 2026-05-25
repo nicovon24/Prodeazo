@@ -25,7 +25,10 @@ router.get(
 router.get(
   '/callback',
   requireGoogleOAuth,
-  passport.authenticate('google', { failureRedirect: `${process.env.FRONTEND_URL}/login` }),
+  passport.authenticate('google', {
+    failureRedirect: `${process.env.FRONTEND_URL}/login`,
+    failureMessage: true,
+  }),
   authController.oauthCallbackSuccess
 )
 

@@ -13,7 +13,8 @@ const registerSchema = z.object({
   name: z.string().min(1).max(50),
 })
 
-export function oauthCallbackSuccess(_req: Request, res: Response) {
+export function oauthCallbackSuccess(req: Request, res: Response) {
+  console.log('[auth] OAuth callback success, user:', (req.user as any)?.id)
   res.redirect(process.env.FRONTEND_URL || 'http://localhost:5173')
 }
 
