@@ -42,7 +42,7 @@ export function Navbar({ variant = 'landing', position = 'relative' }: NavbarPro
             <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
               {user ? (
                 <button
-                  onClick={() => router.push('/fixture')}
+                  onClick={() => router.push('/home')}
                   className="rounded-full bg-primary px-2.5 py-2 font-display text-[11px] font-bold tracking-tight text-black transition-all duration-200 hover:brightness-95 hover:scale-105 active:scale-95 active:translate-y-0.5 sm:px-4 sm:text-sm select-none"
                 >
                   Mi prode

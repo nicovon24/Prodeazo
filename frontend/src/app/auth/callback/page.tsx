@@ -20,7 +20,7 @@ function AuthCallbackInner() {
     apiFetch<{ token: string }>(`/api/auth/exchange?code=${code}`)
       .then(({ token }) => {
         setTokenAndUser(token)
-        router.replace('/')
+        router.replace('/home')
       })
       .catch(() => router.replace('/login'))
   }, [searchParams, router, setTokenAndUser])

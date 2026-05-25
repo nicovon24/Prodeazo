@@ -119,10 +119,10 @@ export default function Landing() {
               </motion.p>
               <motion.div variants={itemVariants} className="mt-5 flex flex-wrap items-center gap-3 sm:mt-6">
                 <Link
-                  href={user ? '/fixture' : '/register'}
+                  href={user ? '/home' : '/register'}
                   className="group inline-flex min-h-11 w-full cursor-pointer select-none items-center justify-center gap-2 rounded-full bg-primary px-6 font-display text-sm font-bold tracking-tight text-black transition-all duration-200 hover:brightness-95 hover:scale-[1.02] hover:shadow-[0_0_20px_rgba(175,232,5,0.4)] active:scale-[0.98] active:translate-y-0.5 sm:min-h-12 sm:w-auto sm:px-7 sm:text-base md:min-h-14 md:px-8 md:text-lg"
                 >
-                  Crear mi prode
+                  {user ? 'Ir a mi prode' : 'Crear mi prode'}
                   <ChevronRight className="h-5 w-5 transition-transform duration-200 group-hover:translate-x-1 sm:h-6 sm:w-6" aria-hidden />
                 </Link>
               </motion.div>
