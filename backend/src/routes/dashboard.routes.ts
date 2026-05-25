@@ -7,5 +7,6 @@ const router = Router()
 
 router.use(requireAuth)
 router.get('/me', asyncHandler(dashboardController.me))
+router.get('/panels', asyncHandler(dashboardController.panels))
 
 export default router

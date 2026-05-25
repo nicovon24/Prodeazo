@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express'
 import * as dashboardModel from '../models/dashboard.model'
+import * as dashboardPanelsService from '../services/dashboard-panels.service'
 
 function parseTournamentId(raw: unknown): string | undefined {
   if (typeof raw === 'string' && raw.trim()) return raw.trim()
@@ -34,4 +35,10 @@ export async function me(req: Request, res: Response) {
     precision: stats.precision,
     bestStreak,
   })
+}
+
+export async function panels(req: Request, res: Response) {
+  const userId = (req.user as { id: string }).id
+  const data = await dashboardPanelsService.getHomePanels(userId)
+  res.json(data)
 }

@@ -8,12 +8,23 @@ import {
   BarChart2,
   CalendarDays,
   CheckCircle,
-  ChevronRight,
   ArrowRight,
+  History,
+  Target,
 } from "lucide-react";
 import { useAuth } from "../../../hooks/useAuth";
 import { Header } from "../../../components/layout/Header";
-import { fetchDashboardMe, type DashboardMe } from "../../../api/dashboard";
+import {
+  fetchDashboardMe,
+  fetchDashboardPanels,
+  type DashboardMe,
+  type DashboardPanels,
+} from "../../../api/dashboard";
+import {
+  PendingMatchRow,
+  RecentResultRow,
+  UpcomingMatchRow,
+} from "@/components/home/MatchPanelRows";
 import styles from "./home.module.css";
 
 function formatCount(n: number): string {
@@ -23,21 +34,35 @@ function formatCount(n: number): string {
 export default function HomePage() {
   const { user } = useAuth();
   const [dashboard, setDashboard] = useState<DashboardMe | null>(null);
+  const [panels, setPanels] = useState<DashboardPanels | null>(null);
   const [loadingStats, setLoadingStats] = useState(true);
+  const [loadingPanels, setLoadingPanels] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
     setLoadingStats(true);
-    fetchDashboardMe()
-      .then((data) => {
-        if (!cancelled) setDashboard(data);
+    setLoadingPanels(true);
+
+    Promise.all([fetchDashboardMe(), fetchDashboardPanels()])
+      .then(([stats, panelData]) => {
+        if (!cancelled) {
+          setDashboard(stats);
+          setPanels(panelData);
+        }
       })
       .catch(() => {
-        if (!cancelled) setDashboard(null);
+        if (!cancelled) {
+          setDashboard(null);
+          setPanels(null);
+        }
       })
       .finally(() => {
-        if (!cancelled) setLoadingStats(false);
+        if (!cancelled) {
+          setLoadingStats(false);
+          setLoadingPanels(false);
+        }
       });
+
     return () => {
       cancelled = true;
     };
@@ -144,154 +169,109 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Content Panels — paso 3: datos reales */}
+        {/* Paneles centrales — datos reales */}
         <div className={styles.panelsRow}>
-          {/* Próximos Partidos */}
+          <div className={styles.panel}>
+            <div className={styles.panelHeader}>
+              <History className="w-5 h-5 text-primary" />
+              Últimos resultados
+            </div>
+            <div className={styles.panelList}>
+              {loadingPanels ? (
+                <p className={styles.panelLoading}>Cargando…</p>
+              ) : panels?.recentResults.length ? (
+                panels.recentResults.map((m) => (
+                  <RecentResultRow key={m.fixtureId} match={m} />
+                ))
+              ) : (
+                <div className={styles.panelEmpty}>
+                  <Target className={styles.panelEmptyIcon} />
+                  <p className={styles.panelEmptyTitle}>
+                    ¡Aún no participaste en ninguna predicción! ¿Qué estás esperando?
+                  </p>
+                  <Link href="/predictions" className={styles.panelEmptyLink}>
+                    Predecí un partido
+                  </Link>
+                </div>
+              )}
+            </div>
+            {(panels?.recentResults.length ?? 0) > 0 && (
+              <div className={styles.panelFooter}>
+                <Link href="/predictions" className={styles.panelFooterBtn}>
+                  Ir a mis predicciones
+                </Link>
+              </div>
+            )}
+          </div>
+
           <div className={styles.panel}>
             <div className={styles.panelHeader}>
               <CalendarDays className="w-5 h-5 text-primary" />
-              Próximos Partidos
+              Próximos con tu predicción
             </div>
             <div className={styles.panelList}>
-              <Link href="/fixture" className={styles.matchCard}>
-                <div className={styles.matchTime}>
-                  <span className={styles.matchTimeLabel}>Hoy</span>
-                  <span className={styles.matchTimeValue}>16:00</span>
-                  <span className={styles.matchKickoff}>Para el kickoff</span>
+              {loadingPanels ? (
+                <p className={styles.panelLoading}>Cargando…</p>
+              ) : panels?.upcomingWithPrediction.length ? (
+                panels.upcomingWithPrediction.map((m) => (
+                  <UpcomingMatchRow key={m.fixtureId} match={m} />
+                ))
+              ) : (
+                <div className={styles.panelEmpty}>
+                  <CalendarDays className={styles.panelEmptyIcon} />
+                  <p className={styles.panelEmptyTitle}>
+                    No tenés predicciones en partidos próximos o en vivo.
+                  </p>
                 </div>
-                <div className={styles.matchTeams}>
-                  <div className={styles.matchTeamsRow}>
-                    <div className={`${styles.team} ${styles.teamRight}`}>
-                      Argentina {"\u{1F1E6}\u{1F1F7}"}
-                    </div>
-                    <span className={styles.vs}>VS</span>
-                    <div className={`${styles.team} ${styles.teamLeft}`}>
-                      {"\u{1F1F8}\u{1F1E6}"} Arabia Saudita
-                    </div>
-                  </div>
-                  <div className={styles.stadium}>Lusail Stadium, Lusail</div>
-                </div>
-                <ChevronRight className={styles.matchChevron} />
-              </Link>
-              
-              <Link href="/fixture" className={styles.matchCard}>
-                <div className={styles.matchTime}>
-                  <span className={styles.matchTimeLabel}>Hoy</span>
-                  <span className={styles.matchTimeValue}>19:00</span>
-                  <span className={styles.matchKickoff}>Para el kickoff</span>
-                </div>
-                <div className={styles.matchTeams}>
-                  <div className={styles.matchTeamsRow}>
-                    <div className={`${styles.team} ${styles.teamRight}`}>
-                      Francia {"\u{1F1EB}\u{1F1F7}"}
-                    </div>
-                    <span className={styles.vs}>VS</span>
-                    <div className={`${styles.team} ${styles.teamLeft}`}>
-                      {"\u{1F1E6}\u{1F1FA}"} Australia
-                    </div>
-                  </div>
-                  <div className={styles.stadium}>Al Janoub Stadium, Al Wakrah</div>
-                </div>
-                <ChevronRight className={styles.matchChevron} />
-              </Link>
-
-              <Link href="/fixture" className={styles.matchCard}>
-                <div className={styles.matchTime}>
-                  <span className={styles.matchTimeLabel}>Mañana</span>
-                  <span className={styles.matchTimeValue}>13:00</span>
-                  <span className={styles.matchKickoff}>Para el kickoff</span>
-                </div>
-                <div className={styles.matchTeams}>
-                  <div className={styles.matchTeamsRow}>
-                    <div className={`${styles.team} ${styles.teamRight}`}>
-                      Brasil {"\u{1F1E7}\u{1F1F7}"}
-                    </div>
-                    <span className={styles.vs}>VS</span>
-                    <div className={`${styles.team} ${styles.teamLeft}`}>
-                      {"\u{1F1F7}\u{1F1F8}"} Serbia
-                    </div>
-                  </div>
-                  <div className={styles.stadium}>Stadium 974, Doha</div>
-                </div>
-                <ChevronRight className={styles.matchChevron} />
-              </Link>
+              )}
             </div>
-            <div className={styles.panelFooter}>
-              <Link href="/fixture" className={styles.panelFooterBtn}>
-                Ver fixture completo
-              </Link>
-            </div>
+            {(panels?.upcomingWithPrediction.length ?? 0) > 0 && (
+              <div className={styles.panelFooter}>
+                <Link href="/fixture" className={styles.panelFooterBtn}>
+                  Ver fixture completo
+                </Link>
+              </div>
+            )}
           </div>
 
-          {/* Pending Predictions */}
           <div className={styles.panel}>
             <div className={styles.panelHeader}>
               <CheckCircle className="w-5 h-5 text-primary" />
-              Partidos pendientes de predicción
-              <span className={styles.panelHeaderBadge}>5</span>
+              Pendientes de predicción
+              {!loadingPanels && (panels?.pendingPredictions.length ?? 0) > 0 && (
+                <span className={styles.panelHeaderBadge}>
+                  {panels!.pendingPredictions.length}
+                </span>
+              )}
             </div>
             <div className={styles.panelList}>
-              <div className={styles.predCard}>
-                <span className={styles.predTime}>13 JUN - 10:00</span>
-                <div className={styles.predTeams}>
-                  <div className={`${styles.predTeam} ${styles.teamRight}`}>
-                    EE.UU. {"\u{1F1FA}\u{1F1F8}"}
+              {loadingPanels ? (
+                <p className={styles.panelLoading}>Cargando…</p>
+              ) : panels?.pendingPredictions.length ? (
+                panels.pendingPredictions.map((m) => (
+                  <div key={m.fixtureId} className={styles.predCardWrap}>
+                    <PendingMatchRow match={m} />
+                    <Link href="/predictions" className={styles.predBtn}>
+                      Predecir
+                    </Link>
                   </div>
-                  <span className={styles.vs}>VS</span>
-                  <div className={`${styles.predTeam} ${styles.teamLeft}`}>
-                    {"\u{1F1EC}\u{1F1E7}"} Gales
-                  </div>
+                ))
+              ) : (
+                <div className={styles.panelEmpty}>
+                  <CheckCircle className={styles.panelEmptyIcon} />
+                  <p className={styles.panelEmptyTitle}>
+                    ¡Ya no te quedan partidos por predecir!
+                  </p>
                 </div>
-                <Link href="/predictions" className={styles.predBtn}>Predecir</Link>
-              </div>
-
-              <div className={styles.predCard}>
-                <span className={styles.predTime}>13 JUN - 16:00</span>
-                <div className={styles.predTeams}>
-                  <div className={`${styles.predTeam} ${styles.teamRight}`}>
-                    Irán {"\u{1F1EE}\u{1F1F7}"}
-                  </div>
-                  <span className={styles.vs}>VS</span>
-                  <div className={`${styles.predTeam} ${styles.teamLeft}`}>
-                    {"\u{1F1F2}\u{1F1E6}"} Marruecos
-                  </div>
-                </div>
-                <Link href="/predictions" className={styles.predBtn}>Predecir</Link>
-              </div>
-
-              <div className={styles.predCard}>
-                <span className={styles.predTime}>14 JUN - 13:00</span>
-                <div className={styles.predTeams}>
-                  <div className={`${styles.predTeam} ${styles.teamRight}`}>
-                    Alemania {"\u{1F1E9}\u{1F1EA}"}
-                  </div>
-                  <span className={styles.vs}>VS</span>
-                  <div className={`${styles.predTeam} ${styles.teamLeft}`}>
-                    {"\u{1F1EF}\u{1F1F5}"} Japón
-                  </div>
-                </div>
-                <Link href="/predictions" className={styles.predBtn}>Predecir</Link>
-              </div>
-
-              <div className={styles.predCard}>
-                <span className={styles.predTime}>14 JUN - 16:00</span>
-                <div className={styles.predTeams}>
-                  <div className={`${styles.predTeam} ${styles.teamRight}`}>
-                    Bélgica {"\u{1F1E7}\u{1F1EA}"}
-                  </div>
-                  <span className={styles.vs}>VS</span>
-                  <div className={`${styles.predTeam} ${styles.teamLeft}`}>
-                    {"\u{1F1ED}\u{1F1F7}"} Croacia
-                  </div>
-                </div>
-                <Link href="/predictions" className={styles.predBtn}>Predecir</Link>
-              </div>
+              )}
             </div>
-            <div className={styles.panelFooter}>
-              <Link href="/predictions" className={styles.panelFooterBtn}>
-                Ver todos los pendientes
-              </Link>
-            </div>
+            {(panels?.pendingPredictions.length ?? 0) > 0 && (
+              <div className={styles.panelFooter}>
+                <Link href="/predictions" className={styles.panelFooterBtn}>
+                  Ver todos los pendientes
+                </Link>
+              </div>
+            )}
           </div>
         </div>
 
