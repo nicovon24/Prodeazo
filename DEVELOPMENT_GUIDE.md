@@ -3,7 +3,7 @@
 ## Requisitos Previos
 
 - **Node.js** v20+
-- **Docker Desktop** (DB, Redis, Backend corren en Docker)
+- **Docker Desktop** (DB y Backend corren en Docker)
 - **pnpm** (`npm i -g pnpm`)
 - **Git**
 
@@ -29,7 +29,6 @@ POSTGRES_USER="postgres"
 POSTGRES_PASSWORD="postgres"
 POSTGRES_DB="prodeazo"
 
-REDIS_URL="redis://localhost:6379"
 SESSION_SECRET="un_secreto_largo_aleatorio"
 
 BZZOIRO_API_KEY="tu_api_key"
@@ -73,7 +72,7 @@ http://localhost:4000/api/auth/callback
 docker compose up -d
 ```
 
-Levanta: **Postgres** (5432), **Redis** (6379), **Backend** (4000), **migrate** (tarea única).
+Levanta: **Postgres** (5432), **Backend** (4000), **migrate** (tarea única).
 
 Verificar que todo esté healthy:
 ```bash

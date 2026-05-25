@@ -17,7 +17,7 @@ src/
 ├── routes/        # Express routers
 ├── middleware/    # requireAuth, errors, etc.
 ├── db/            # Drizzle client + schema
-├── config/        # Passport, Redis, session
+├── config/        # Passport, session
 ├── jobs/          # Recurring score sync job
 └── scripts/       # Seeds and CLI helpers
 drizzle/           # Generated migrations + meta
@@ -28,7 +28,8 @@ drizzle/           # Generated migrations + meta
 - **Runtime**: Node.js, Express 5, strict TypeScript (`tsx` in dev)
 - **ORM**: Drizzle + `drizzle-kit` — schema in `src/db/schema.ts`
 - **DB**: PostgreSQL (`pg`)
-- **Cache / sessions**: Redis (`ioredis`, `connect-redis`)
+- **Sessions**: cookie-session (stateless signed cookies, no server store needed)
+- **Cache**: in-memory Map with TTL (`src/services/cache.service.ts`)
 - **Auth**: Passport (Google OAuth 2.0 + local)
 - **Validation**: Zod v4
 - **Packages**: this folder declares `packageManager` pnpm; scripts also work with `npm run` from `backend/`
@@ -60,7 +61,7 @@ Useful invariants:
 ## Implementation rules (API)
 
 - New routes: Zod validation, `requireAuth` where needed, and `asyncHandler` on async handlers (Express 5 handles rejections differently from v4)
-- Cache invalidation (fixtures, leaderboard) lives in `CacheService` — do not call Redis directly from controllers
+- Cache invalidation (fixtures, leaderboard) lives in `CacheService` — do not bypass it in controllers
 - No second parallel server/API unless architecture explicitly decides it
 - URLs, tokens, and secrets come from `src/env.ts`, not hardcoded literals
 

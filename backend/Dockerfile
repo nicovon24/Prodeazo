@@ -12,7 +12,15 @@ RUN npm install
 COPY src ./src/
 COPY drizzle ./drizzle/
 
-RUN npm run build && npm prune --omit=dev
+RUN npm run build
+
+# ─── migrator ────────────────────────────────────────────────────────────────
+# Keeps devDependencies (drizzle-kit) so db:push can run
+FROM builder AS migrator
+
+# ─── pruner ──────────────────────────────────────────────────────────────────
+FROM builder AS pruner
+RUN npm prune --omit=dev
 
 # ─── runner ──────────────────────────────────────────────────────────────────
 
@@ -23,9 +31,9 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=4000
 
-COPY --from=builder /app/package.json ./
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/dist ./dist
+COPY --from=pruner /app/package.json ./
+COPY --from=pruner /app/node_modules ./node_modules
+COPY --from=pruner /app/dist ./dist
 
 EXPOSE 4000
 
