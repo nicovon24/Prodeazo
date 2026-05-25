@@ -1,0 +1,127 @@
+.panel {
+  background-color: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-primary);
+}
+
+.title {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #fff;
+}
+
+.desc {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.5);
+  margin: 0 0 12px;
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+}
+
+.generateBtn {
+  height: 40px;
+  border-radius: 10px;
+  background-color: var(--color-primary);
+  color: #000;
+  font-weight: 700;
+  font-size: 0.875rem;
+  border: none;
+  cursor: pointer;
+  transition: filter 0.15s;
+  padding: 0 16px;
+  align-self: flex-start;
+}
+
+.generateBtn:hover:not(:disabled) {
+  filter: brightness(0.92);
+}
+
+.generateBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.linkBox {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.urlRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+
+.url {
+  flex: 1;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.7);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.copyBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--color-primary);
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.expiry {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.renewBtn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0;
+  width: fit-content;
+  transition: color 0.15s;
+}
+
+.renewBtn:hover:not(:disabled) {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.renewBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.error {
+  font-size: 0.8rem;
+  color: #ff4d4d;
+  margin: 0;
+}

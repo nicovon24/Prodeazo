@@ -1,5 +1,9 @@
 node_modules/
 dist/
+frontend/.next/
 .env
 .env.local
 *.log
+REVIEW.md
+/backend/REVIEW.md
+/frontend/REVIEW.md
