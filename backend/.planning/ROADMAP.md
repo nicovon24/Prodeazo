@@ -50,7 +50,7 @@
 - POST `/api/predictions` with `{}` → 400 with validation message
 - POST `/api/predictions` with `homeGoals: -1` → 400
 - GET `/api/auth/me` → body must not include `googleId`
-- POST `/api/auth/logout` → session cleared (Redis key gone when applicable)
+- POST `/api/auth/logout` → session cleared (cookie removed)
 
 **Success Criteria:**
 1. A throwing handler does not kill the server

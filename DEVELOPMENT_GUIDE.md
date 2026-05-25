@@ -1,6 +1,11 @@
 # Guía de desarrollo — Prodeazo
 
-Procedimiento probado en local (rama `feat/frontend`, Docker Desktop, frontend con `npm`).
+## Requisitos Previos
+
+- **Node.js** v20+
+- **Docker Desktop** (DB y Backend corren en Docker)
+- **pnpm** (`npm i -g pnpm`)
+- **Git**
 
 ---
 
@@ -89,15 +94,6 @@ Desde la **raíz del repo**:
 ```bash
 docker compose up -d
 ```
-
-Servicios:
-
-| Servicio | Puerto en tu PC | Rol |
-|----------|-----------------|-----|
-| Postgres | 5432 | Base de datos |
-| Redis | 6379 | Sesiones / caché |
-| Backend | **4000** | API (`/api/...`) |
-| migrate | — | Tarea única: schema (`drizzle-kit push`) |
 
 Verificar:
 

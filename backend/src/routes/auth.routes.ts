@@ -7,6 +7,8 @@ import { requireAuth } from '../middleware/requireAuth'
 
 const router = Router()
 
+const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000'
+
 const requireGoogleOAuth: RequestHandler = (_req, res, next) => {
   if (!isGoogleOAuthEnabled) {
     return res.status(503).json({
@@ -20,21 +22,27 @@ const requireGoogleOAuth: RequestHandler = (_req, res, next) => {
 router.get(
   '/google',
   requireGoogleOAuth,
-  passport.authenticate('google', { scope: ['profile', 'email'] })
+  passport.authenticate('google', { scope: ['profile', 'email'], session: false })
 )
 
 router.get(
   '/callback',
   requireGoogleOAuth,
-  passport.authenticate('google', { failureRedirect: `${process.env.FRONTEND_URL}/login` }),
+  passport.authenticate('google', {
+    failureRedirect: `${frontendUrl}/login`,
+    failureMessage: true,
+    session: false,
+  }),
   authController.oauthCallbackSuccess
 )
 
+router.get('/exchange', asyncHandler(authController.exchangeCode))
+
 router.post('/register', asyncHandler(authController.register))
 router.post('/login', asyncHandler(authController.localLogin))
-router.post('/logout', asyncHandler(authController.logout))
+router.post('/logout', requireAuth, asyncHandler(authController.logout))
 
-router.get('/me', asyncHandler(authController.me))
+router.get('/me', requireAuth, asyncHandler(authController.me))
 router.patch('/me', requireAuth, asyncHandler(authController.updateProfile))
 router.delete('/me', requireAuth, asyncHandler(authController.deleteAccount))
 router.post('/change-password', requireAuth, asyncHandler(authController.changePassword))

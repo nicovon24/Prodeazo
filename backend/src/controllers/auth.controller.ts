@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto'
 import type { Request, Response, NextFunction } from 'express'
 import { z } from 'zod'
 import bcrypt from 'bcrypt'
@@ -6,6 +7,8 @@ import { db } from '../db/client'
 import { users } from '../db/schema'
 import { eq } from 'drizzle-orm'
 import { err } from '../utils/apiError'
+import { signToken } from '../utils/jwt'
+import { getCache, setCache, deleteCache } from '../services/cache.service'
 
 const registerSchema = z.object({
   email: z.string().email(),
@@ -23,24 +26,70 @@ const changePasswordSchema = z.object({
   newPassword: z.string().min(8),
 })
 
-export function oauthCallbackSuccess(_req: Request, res: Response) {
-  res.redirect(process.env.FRONTEND_URL || 'http://localhost:5173')
+function userToPayload(user: Express.User) {
+  return {
+    sub: user.id,
+    email: user.email,
+    name: user.name,
+    avatar: user.avatar,
+    authProvider: user.authProvider,
+  }
 }
 
-export function logout(req: Request, res: Response, next: (err?: unknown) => void) {
-  req.logout((logoutErr) => {
-    if (logoutErr) return next(logoutErr)
-    req.session.destroy((destroyErr) => {
-      if (destroyErr) return next(destroyErr)
-      res.json({ ok: true })
-    })
-  })
+function userToPublic(user: Express.User) {
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    avatar: user.avatar,
+    authProvider: user.authProvider,
+  }
+}
+
+/**
+ * Google OAuth success handler.
+ * Issues a short-lived one-time code (60 s) instead of the JWT directly in the URL,
+ * so the token never appears in server logs, browser history, or Referer headers.
+ * The frontend exchanges the code for the real JWT via GET /api/auth/exchange.
+ */
+export function oauthCallbackSuccess(req: Request, res: Response) {
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('[auth] OAuth callback success, user:', req.user?.id)
+  }
+
+  const token = signToken(userToPayload(req.user!))
+  const code = randomUUID()
+  setCache(`oauth_code:${code}`, token, 60)
+
+  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000'
+  res.redirect(`${frontendUrl}/auth/callback?code=${code}`)
+}
+
+/**
+ * One-time code → JWT exchange for the OAuth flow.
+ * Each code is single-use and expires after 60 s.
+ */
+export function exchangeCode(req: Request, res: Response) {
+  const code = typeof req.query.code === 'string' ? req.query.code : null
+  if (!code) {
+    return res.status(400).json(err('BAD_REQUEST', 'Missing code'))
+  }
+
+  const token = getCache<string>(`oauth_code:${code}`)
+  if (!token) {
+    return res.status(400).json(err('BAD_REQUEST', 'Invalid or expired code'))
+  }
+
+  deleteCache(`oauth_code:${code}`)
+  res.json({ token })
+}
+
+export function logout(_req: Request, res: Response) {
+  res.json({ ok: true })
 }
 
 export function me(req: Request, res: Response) {
-  if (!req.isAuthenticated()) return res.status(401).json({ user: null })
-  const { id, email, name, avatar, authProvider } = req.user as any
-  res.json({ user: { id, email, name, avatar, authProvider } })
+  res.json({ user: userToPublic(req.user!) })
 }
 
 export async function updateProfile(req: Request, res: Response) {
@@ -95,7 +144,7 @@ export async function changePassword(req: Request, res: Response) {
   res.json({ ok: true })
 }
 
-export async function register(req: Request, res: Response, next: NextFunction) {
+export async function register(req: Request, res: Response) {
   const parsed = registerSchema.safeParse(req.body)
   if (!parsed.success) {
     return res.status(400).json(err('VALIDATION_ERROR', parsed.error.issues[0]?.message ?? 'Invalid input'))
@@ -114,41 +163,29 @@ export async function register(req: Request, res: Response, next: NextFunction) 
     .values({ email, name, passwordHash, authProvider: 'local' })
     .returning()
 
-  req.login(newUser, (loginErr) => {
-    if (loginErr) return next(loginErr)
-    const { id, email: e, name: n, avatar, authProvider } = newUser
-    res.status(201).json({ user: { id, email: e, name: n, avatar, authProvider } })
-  })
+  if (!newUser) throw new Error('Insert returned no user')
+
+  const token = signToken(userToPayload(newUser))
+  res.status(201).json({ user: userToPublic(newUser), token })
 }
 
 export function localLogin(req: Request, res: Response, next: NextFunction) {
   passport.authenticate(
     'local',
+    { session: false },
     (authErr: Error | null, user: Express.User | false) => {
       if (authErr) return next(authErr)
       if (!user) {
         return res.status(401).json(err('UNAUTHORIZED', 'Invalid email or password'))
       }
-      req.login(user, (loginErr) => {
-        if (loginErr) return next(loginErr)
-        const { id, email, name, avatar, authProvider } = user as any
-        res.json({ user: { id, email, name, avatar, authProvider } })
-      })
+      const token = signToken(userToPayload(user))
+      res.json({ user: userToPublic(user), token })
     }
   )(req, res, next)
 }
 
 export async function deleteAccount(req: Request, res: Response) {
   const userId = (req.user as { id: string }).id
-
-  // Perform deletion (Cascade deletes should be handled by DB if configured,
-  // but let's be safe or just rely on the session logout after deletion)
   await db.delete(users).where(eq(users.id, userId))
-
-  req.logout((err) => {
-    if (err) return res.status(500).json({ error: 'Failed to logout after deletion' })
-    req.session.destroy(() => {
-      res.json({ ok: true })
-    })
-  })
+  res.json({ ok: true })
 }

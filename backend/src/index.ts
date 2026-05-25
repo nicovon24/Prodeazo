@@ -2,14 +2,11 @@ import './env'
 import express from 'express'
 import { randomUUID } from 'node:crypto'
 import { runScoreSync } from './jobs/score-sync'
-import session from 'express-session'
-import { RedisStore } from 'connect-redis'
 import cors from 'cors'
 import morgan from 'morgan'
 import helmet from 'helmet'
 // import rateLimit from 'express-rate-limit'
 import passport from './config/passport'
-import { redis } from './config/redis'
 import authRoutes from './routes/auth.routes'
 import teamsRoutes from './routes/teams.routes'
 import fixturesRoutes from './routes/fixtures.routes'
@@ -24,35 +21,19 @@ const PORT = process.env.PORT || 4000
 // const globalLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 200, standardHeaders: true, legacyHeaders: false })
 // const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, standardHeaders: true, legacyHeaders: false })
 
-const sessionSecret =
-  process.env.SESSION_SECRET ||
-  (process.env.NODE_ENV === 'production' ? '' : 'dev-session-secret-not-for-production')
-
-if (!sessionSecret) {
-  throw new Error('SESSION_SECRET is required in production')
-}
-
-const sessionStoreEnv = process.env.SESSION_STORE?.trim().toLowerCase()
-/** En desarrollo: memoria por defecto (sin Redis). En producción: Redis salvo SESSION_STORE=memory. */
-const useMemorySessions =
-  sessionStoreEnv === 'memory' ||
-  (process.env.NODE_ENV !== 'production' && sessionStoreEnv !== 'redis')
-
-if (useMemorySessions) {
-  if (process.env.NODE_ENV !== 'production' && sessionStoreEnv !== 'memory') {
-    console.warn(
-      '[session] Using in-memory store in development (set SESSION_STORE=redis + run Redis for persistent sessions)'
-    )
-  } else {
-    console.warn('[session] Using in-memory store (set SESSION_STORE=redis when Redis is available)')
-  }
-}
-
 app.use(helmet())
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:3001',
+  'http://localhost:5173',
+  'https://prodeazo.vercel.app',
+  ...(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : []),
+]
+
 app.use(
   cors({
-    origin: ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:5173'],
-    credentials: true,
+    origin: allowedOrigins,
+    credentials: false,
   })
 )
 
@@ -71,21 +52,8 @@ app.use(morgan(morganFormat))
 
 app.use(express.json({ limit: '3mb' }))
 
-app.use(
-  session({
-    ...(useMemorySessions
-      ? {}
-      : { store: new RedisStore({ client: redis }) }),
-    secret: sessionSecret,
-    resave: false,
-    saveUninitialized: false,
-    cookie: { httpOnly: true, sameSite: 'lax', secure: false, maxAge: 7 * 24 * 60 * 60 * 1000 },
-  })
-
-)
-
+// Passport only for OAuth strategy — no session middleware needed with JWT auth
 app.use(passport.initialize())
-app.use(passport.session())
 
 app.get('/api/health', (_req, res) => res.json({ ok: true }))
 app.use('/api/auth', /* authLimiter, */ authRoutes)

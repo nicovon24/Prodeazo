@@ -2,6 +2,7 @@
 
 Plataforma de pronósticos y estadísticas de fútbol (Mundial 2026, Premier League y más torneos vía selector).
 
+
 ## Desarrollo local
 
 **Guía paso a paso (rama, `envs/`, Docker, seed, frontend):** [DEVELOPMENT_GUIDE.md](./DEVELOPMENT_GUIDE.md)
@@ -26,3 +27,11 @@ Resumen:
 - Predicciones y ranking
 - Miniligas con invitaciones
 - Auth (local + Google OAuth)
+
+## Roadmap de alto nivel
+- **Fase 1 (MVP):** foco en predicciones + ranking.
+- **Fase 2:** miniligas y panel administrativo.
+- **Fase 3:** módulo estadístico completo y expansión multi-torneo.
+
+> Objetivo: la versión inicial estará ideada para terminarse antes del inicio del Mundial 2026,
+> y luego evolucionará como producto reusable para otros torneos.

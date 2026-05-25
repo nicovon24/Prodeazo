@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { FormEvent, useEffect, useState } from 'react'
+import { FormEvent, Suspense, useEffect, useState } from 'react'
 import { Eye, EyeOff, Mail } from 'lucide-react'
 import { AuthInput, ErrorList, GoogleIcon } from '@/components/AuthControls'
 import { AuthShell } from '@/components/AuthShell'
@@ -22,6 +22,14 @@ function getLoginErrorMessage(error: unknown) {
 }
 
 export default function Login() {
+  return (
+    <Suspense fallback={<div className="flex min-h-dvh items-center justify-center bg-background text-foreground/70">Cargando...</div>}>
+      <LoginContent />
+    </Suspense>
+  )
+}
+
+function LoginContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { user, loading, login } = useAuth()
