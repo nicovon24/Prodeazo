@@ -1,3 +1,5 @@
+import https from 'node:https'
+import http from 'node:http'
 import { type NextRequest } from 'next/server'
 
 const BACKEND = process.env.BACKEND_URL ?? 'https://prodeazo.onrender.com'
@@ -8,31 +10,36 @@ const BACKEND = process.env.BACKEND_URL ?? 'https://prodeazo.onrender.com'
  * upstream responses, so this route handler is needed to properly persist
  * the session cookie on the vercel.app domain.
  *
- * cookie-session sets two cookies (session + session.sig). We use
- * getSetCookie() instead of headers.forEach/get because the Fetch API
- * combines multiple Set-Cookie values into one string when accessed via
- * those methods, producing an unparseable cookie header in the browser.
+ * Uses node:https directly (instead of Next.js-patched fetch) to avoid
+ * issues with redirect:manual and to get set-cookie as a proper string[].
  */
-export async function GET(req: NextRequest) {
-  const renderRes = await fetch(
-    `${BACKEND}/api/auth/callback${req.nextUrl.search}`,
-    { redirect: 'manual' }
-  )
+export async function GET(req: NextRequest): Promise<Response> {
+  const target = new URL(`/api/auth/callback${req.nextUrl.search}`, BACKEND)
+  const mod = target.protocol === 'https:' ? https : http
 
-  const location = renderRes.headers.get('location') ?? '/'
-  const absoluteLocation = new URL(location, req.url).toString()
+  return new Promise<Response>((resolve) => {
+    mod
+      .get({ hostname: target.hostname, path: target.pathname + target.search }, (res) => {
+        const location =
+          res.headers.location ??
+          process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') ??
+          'https://prodeazo.vercel.app'
 
-  const resHeaders = new Headers()
-  resHeaders.set('location', absoluteLocation)
+        const rawCookies = res.headers['set-cookie']
+        const cookies: string[] = Array.isArray(rawCookies)
+          ? rawCookies
+          : rawCookies
+            ? [rawCookies]
+            : []
 
-  // getSetCookie() returns each Set-Cookie as a separate array entry,
-  // preserving the two session cookies cookie-session sends.
-  const setCookies: string[] =
-    typeof (renderRes.headers as any).getSetCookie === 'function'
-      ? (renderRes.headers as any).getSetCookie()
-      : renderRes.headers.get('set-cookie')?.split(/,(?=[^ ])/) ?? []
+        const out = new Headers({ location })
+        cookies.forEach((c) => out.append('set-cookie', c))
 
-  setCookies.forEach((c) => resHeaders.append('set-cookie', c))
-
-  return new Response(null, { status: 302, headers: resHeaders })
+        resolve(new Response(null, { status: 302, headers: out }))
+      })
+      .on('error', (e) => {
+        console.error('[callback proxy] upstream error:', e)
+        resolve(new Response('Auth callback failed', { status: 502 }))
+      })
+  })
 }
