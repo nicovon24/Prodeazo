@@ -2,14 +2,12 @@ import './env'
 import express from 'express'
 import { randomUUID } from 'node:crypto'
 import { runScoreSync } from './jobs/score-sync'
-import session from 'express-session'
-import { RedisStore } from 'connect-redis'
+import cookieSession from 'cookie-session'
 import cors from 'cors'
 import morgan from 'morgan'
 import helmet from 'helmet'
 // import rateLimit from 'express-rate-limit'
 import passport from './config/passport'
-import { redis } from './config/redis'
 import authRoutes from './routes/auth.routes'
 import teamsRoutes from './routes/teams.routes'
 import fixturesRoutes from './routes/fixtures.routes'
@@ -30,22 +28,6 @@ const sessionSecret =
 
 if (!sessionSecret) {
   throw new Error('SESSION_SECRET is required in production')
-}
-
-const sessionStoreEnv = process.env.SESSION_STORE?.trim().toLowerCase()
-/** En desarrollo: memoria por defecto (sin Redis). En producción: Redis salvo SESSION_STORE=memory. */
-const useMemorySessions =
-  sessionStoreEnv === 'memory' ||
-  (process.env.NODE_ENV !== 'production' && sessionStoreEnv !== 'redis')
-
-if (useMemorySessions) {
-  if (process.env.NODE_ENV !== 'production' && sessionStoreEnv !== 'memory') {
-    console.warn(
-      '[session] Using in-memory store in development (set SESSION_STORE=redis + run Redis for persistent sessions)'
-    )
-  } else {
-    console.warn('[session] Using in-memory store (set SESSION_STORE=redis when Redis is available)')
-  }
 }
 
 app.use(helmet())
@@ -79,18 +61,33 @@ app.use(morgan(morganFormat))
 
 app.use(express.json())
 
-app.use(
-  session({
-    ...(useMemorySessions
-      ? {}
-      : { store: new RedisStore({ client: redis }) }),
-    secret: sessionSecret,
-    resave: false,
-    saveUninitialized: false,
-    cookie: { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', maxAge: 7 * 24 * 60 * 60 * 1000 },
-  })
+const secureCookie =
+  process.env.COOKIE_SECURE === 'true' ||
+  (process.env.COOKIE_SECURE !== 'false' && process.env.NODE_ENV === 'production')
 
+app.use(
+  cookieSession({
+    name: 'session',
+    secret: sessionSecret,
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: secureCookie,
+  })
 )
+
+// Passport >=0.6 calls req.session.regenerate() and req.session.save(), but
+// cookie-session never implemented them. Shim them as no-ops so the two libs
+// can coexist without switching to express-session.
+app.use((req, _res, next) => {
+  if (req.session && !req.session.regenerate) {
+    req.session.regenerate = (cb: (err?: unknown) => void) => cb()
+  }
+  if (req.session && !req.session.save) {
+    req.session.save = (cb: (err?: unknown) => void) => cb()
+  }
+  next()
+})
 
 app.use(passport.initialize())
 app.use(passport.session())

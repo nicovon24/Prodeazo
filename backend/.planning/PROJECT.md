@@ -6,7 +6,7 @@ Node.js/TypeScript backend for a 2026 World Cup prediction pool. Users sign in w
 
 ## Context
 
-Data infrastructure is in place (auth, DB schema, Redis cache, Bzzoiro integration), but three gaps remain before it is truly deploy-ready:
+Data infrastructure is in place (auth, DB schema, in-memory cache, Bzzoiro integration), but three gaps remain before it is truly deploy-ready:
 1. **Hardening** — async handlers without try/catch, unvalidated inputs, internal field leaks
 2. **Sync loop** — scores update in Bzzoiro but are not always persisted to our DB paths
 3. **Scoring** — `calculatePredictionPoints()` exists but must be wired; predictions need persisted points
@@ -17,8 +17,8 @@ The frontend is handled by another developer — this plan is 100% backend.
 
 - **Runtime:** Node.js + TypeScript + Express
 - **DB:** PostgreSQL via Drizzle ORM
-- **Cache:** Redis (ioredis)
-- **Auth:** Google OAuth via Passport.js + express-session
+- **Cache:** In-memory Map con TTL
+- **Auth:** Google OAuth via Passport.js + cookie-session
 - **Provider:** Bzzoiro API (fixtures, live scores, standings, rosters)
 - **Tests:** none yet
 
@@ -30,10 +30,10 @@ Users can make predictions and see how many points they earned after each match.
 
 ### Validated (already in codebase)
 
-- ✓ Google OAuth with Redis-backed sessions
+- ✓ Google OAuth with cookie-based sessions (stateless, no Redis)
 - ✓ DB schema: users, teams, fixtures, predictions (and mini leagues)
 - ✓ Routes: auth, teams, fixtures (/live, /standings), predictions CRUD
-- ✓ Bzzoiro integration with Redis caching (TTLs)
+- ✓ Bzzoiro integration with in-memory caching (TTLs)
 - ✓ Seed script for fixtures / teams
 - ✓ Scoring logic implemented (`scoring.ts`)
 

@@ -20,10 +20,8 @@ export function oauthCallbackSuccess(_req: Request, res: Response) {
 export function logout(req: Request, res: Response, next: (err?: unknown) => void) {
   req.logout((logoutErr) => {
     if (logoutErr) return next(logoutErr)
-    req.session.destroy((destroyErr) => {
-      if (destroyErr) return next(destroyErr)
-      res.json({ ok: true })
-    })
+    req.session = null
+    res.json({ ok: true })
   })
 }
 

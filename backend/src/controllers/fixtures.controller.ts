@@ -83,7 +83,7 @@ export async function list(req: Request, res: Response) {
       const cacheKey = Number.isFinite(leagueNum)
         ? `fixture_team_labels:${tournament.id}:league:${leagueNum}`
         : `fixture_team_labels:${tournament.id}:season:${seasonId}`
-      let entries = await getCache<FixtureLabelCacheEntry[]>(cacheKey)
+      let entries = getCache<FixtureLabelCacheEntry[]>(cacheKey)
       let labelMap: Map<number, FixtureTeamLabels>
       if (entries?.length) {
         labelMap = new Map(entries)
@@ -91,7 +91,7 @@ export async function list(req: Request, res: Response) {
         labelMap = Number.isFinite(leagueNum)
           ? await fetchEventTeamLabelsForLeague(leagueNum)
           : await fetchEventTeamLabelsForSeason(seasonId)
-        await setCache(cacheKey, [...labelMap.entries()] as FixtureLabelCacheEntry[], LABEL_CACHE_TTL_SEC)
+        setCache(cacheKey, [...labelMap.entries()] as FixtureLabelCacheEntry[], LABEL_CACHE_TTL_SEC)
       }
 
       out = rows.map((r) => {
@@ -120,12 +120,12 @@ export async function live(req: Request, res: Response) {
     return res.status(404).json(err('NOT_FOUND', 'Tournament not found'))
   }
   const cacheKey = `live:${tournament.id}`
-  const cached = await getCache<unknown[]>(cacheKey)
+  const cached = getCache<unknown[]>(cacheKey)
   if (cached) return res.json(paginate(cached, req))
 
   const data = await fetchLiveScores()
   const rows = data.results
-  await setCache(cacheKey, rows, 60)
+  setCache(cacheKey, rows, 60)
   res.json(paginate(rows, req))
 }
 
@@ -137,11 +137,11 @@ export async function standings(req: Request, res: Response) {
   }
 
   const cacheKey = `standings:${tournament.id}`
-  const cached = await getCache<unknown[]>(cacheKey)
+  const cached = getCache<unknown[]>(cacheKey)
   if (cached) return res.json(paginate(cached, req))
 
   const seasonId = tournament.seasonIds ? Number(tournament.seasonIds.split(',')[0]) : undefined
   const data = await fetchStandings(tournament.leagueId, Number.isFinite(seasonId) ? seasonId : undefined)
-  await setCache(cacheKey, data, 900)
+  setCache(cacheKey, data, 900)
   res.json(paginate(Array.isArray(data) ? data : [data], req))
 }

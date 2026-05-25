@@ -1,19 +1,20 @@
-import { redis } from '../config/redis'
-
-export async function getCache<T>(key: string): Promise<T | null> {
-  try {
-    const data = await redis.get(key)
-    if (!data) return null
-    return JSON.parse(data) as T
-  } catch {
-    return null
-  }
+interface CacheEntry<T> {
+  value: T
+  expiresAt: number
 }
 
-export async function setCache(key: string, value: unknown, ttlSeconds: number): Promise<void> {
-  try {
-    await redis.set(key, JSON.stringify(value), 'EX', ttlSeconds)
-  } catch {
-    // Redis optional in local dev
+const store = new Map<string, CacheEntry<unknown>>()
+
+export function getCache<T>(key: string): T | null {
+  const entry = store.get(key)
+  if (!entry) return null
+  if (Date.now() > entry.expiresAt) {
+    store.delete(key)
+    return null
   }
+  return entry.value as T
+}
+
+export function setCache(key: string, value: unknown, ttlSeconds: number): void {
+  store.set(key, { value, expiresAt: Date.now() + ttlSeconds * 1000 })
 }
