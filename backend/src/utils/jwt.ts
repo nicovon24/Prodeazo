@@ -5,11 +5,11 @@ if (!secret) throw new Error('JWT_SECRET (or SESSION_SECRET) environment variabl
 
 const SEVEN_DAYS_SECONDS = 7 * 24 * 60 * 60
 
+/** Claims stored in the JWT — keep small (no avatar; avatars can be multi‑MB base64). */
 export interface JwtPayload {
   sub: string
   email: string
   name: string
-  avatar?: string | null
   authProvider?: string | null
 }
 

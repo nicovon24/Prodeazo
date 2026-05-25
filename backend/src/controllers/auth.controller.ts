@@ -31,7 +31,6 @@ function userToPayload(user: Express.User) {
     sub: user.id,
     email: user.email,
     name: user.name,
-    avatar: user.avatar,
     authProvider: user.authProvider,
   }
 }
@@ -88,8 +87,13 @@ export function logout(_req: Request, res: Response) {
   res.json({ ok: true })
 }
 
-export function me(req: Request, res: Response) {
-  res.json({ user: userToPublic(req.user!) })
+export async function me(req: Request, res: Response) {
+  const userId = (req.user as { id: string }).id
+  const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1)
+  if (!user) {
+    return res.status(404).json(err('NOT_FOUND', 'User not found'))
+  }
+  res.json({ user: userToPublic(user) })
 }
 
 export async function updateProfile(req: Request, res: Response) {

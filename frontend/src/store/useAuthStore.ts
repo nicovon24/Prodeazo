@@ -63,14 +63,20 @@ interface AuthState {
   setUser: (user: User | null) => void
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
-  user: loadUserFromStorage(),
+export const useAuthStore = create<AuthState>((set, get) => ({
+  user: null,
   loading: false,
 
   setTokenAndUser: (token: string) => {
+    if (token.length > 4096) {
+      localStorage.removeItem(TOKEN_KEY)
+      set({ user: null, loading: false })
+      return
+    }
     localStorage.setItem(TOKEN_KEY, token)
     const user = loadUserFromStorage()
-    set({ user, loading: false })
+    set({ user, loading: true })
+    void get().fetchMe()
   },
 
   fetchMe: async () => {

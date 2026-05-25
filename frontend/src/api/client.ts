@@ -30,9 +30,18 @@ export function apiUrl(path: string) {
   return `${API_BASE_URL}${path}`
 }
 
+/** Legacy JWTs embedded multi‑MB avatars and triggered HTTP 431 on API calls. */
+const MAX_TOKEN_CHARS = 4096
+
 function getToken(): string | null {
   if (typeof window === 'undefined') return null
-  return localStorage.getItem('auth_token')
+  const token = localStorage.getItem('auth_token')
+  if (!token) return null
+  if (token.length > MAX_TOKEN_CHARS) {
+    localStorage.removeItem('auth_token')
+    return null
+  }
+  return token
 }
 
 export async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {

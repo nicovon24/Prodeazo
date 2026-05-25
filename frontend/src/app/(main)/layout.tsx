@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { Sidebar } from "@/components/layout/Sidebar";
@@ -11,17 +11,21 @@ export default function MainLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, loading } = useAuth();
+  const { user, loading, fetchMe } = useAuth();
   const router = useRouter();
+  const [authReady, setAuthReady] = useState(false);
 
   useEffect(() => {
-    if (!loading && !user) {
-      console.log('[MainLayout] No user found, redirecting to /login');
-      router.push("/login");
-    }
-  }, [user, loading, router]);
+    fetchMe().finally(() => setAuthReady(true));
+  }, [fetchMe]);
 
-  if (loading) {
+  useEffect(() => {
+    if (authReady && !loading && !user) {
+      router.replace("/login");
+    }
+  }, [authReady, loading, user, router]);
+
+  if (!authReady || loading) {
     return (
       <div
         style={{
