@@ -28,9 +28,9 @@ drizzle/           # Generated migrations + meta
 - **Runtime**: Node.js, Express 5, strict TypeScript (`tsx` in dev)
 - **ORM**: Drizzle + `drizzle-kit` — schema in `src/db/schema.ts`
 - **DB**: PostgreSQL (`pg`)
-- **Sessions**: cookie-session (stateless signed cookies, no server store needed)
+- **Auth**: JWT — signed tokens stored in frontend localStorage, sent as `Authorization: Bearer <token>` (migrated from cookie-session May 2026; see `ARCHITECTURE.md` ADR-001)
 - **Cache**: in-memory Map with TTL (`src/services/cache.service.ts`)
-- **Auth**: Passport (Google OAuth 2.0 + local)
+- **OAuth**: Passport (Google OAuth 2.0) — callback issues one-time code, frontend exchanges for JWT
 - **Validation**: Zod v4
 - **Packages**: this folder declares `packageManager` pnpm; scripts also work with `npm run` from `backend/`
 

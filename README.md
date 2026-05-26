@@ -1,37 +1,64 @@
-# Prodeazo
+# Prodeazo (2026 FIFA World Cup Prediction Pool)
 
-Plataforma de pronósticos y estadísticas de fútbol (Mundial 2026, Premier League y más torneos vía selector).
+This app is designed to be a football prediction and statistics platform,
+starting with the 2026 World Cup and later expanding to other tournaments.
 
+## What is this project about?
 
-## Desarrollo local
+The platform will allow users to:
+- View fixtures and results in real time.
+- Submit match predictions.
+- Earn points for correct picks.
+- Compare users on global and league-specific rankings.
+- Browse stats for teams, players, and matches.
 
-**Guía paso a paso (rama, `envs/`, Docker, seed, frontend):** [DEVELOPMENT_GUIDE.md](./DEVELOPMENT_GUIDE.md)
+## Planned features and modules
 
-Resumen:
+### 1) Core module (MVP)
+- **Fixture**: match list with states (pending, live, finished).
+- **Predictions**: submit scorelines before kick-off.
+- **Global ranking**: leaderboard sorted by total points.
+- **Head-to-head**: user vs user, match by match.
+- **Tournament picks**: champion / top scorer and other special picks.
+- **Profile**: personal summary (correct picks, points, and history).
 
-1. Copiar `envs/back/.env` → `backend/.env` y `envs/front/.env` → `frontend/.env`
-2. `docker compose up -d` (API en `http://localhost:4000`)
-3. `docker compose run --rm --no-deps migrate pnpm seed`
-4. `cd frontend && npm run dev` → `http://localhost:3000`
+### 2) Mini leagues and administration (phase 2)
+- **Private / public mini leagues** with invite codes.
+- **Per-league leaderboard**.
+- **Admin panel** for manual adjustments (results, scoring, users).
+
+### 3) Stats module and multi-tournament expansion (phase 3)
+- **Groups and knockout bracket** for the active tournament.
+- **Top scorers, assisters, and advanced metrics**.
+- **Match view** with events and enriched data.
+- **Team and player profiles**.
+- **Reusable base for adding new tournaments** (cups and international leagues).
 
 ## Stack
 
-- **Frontend:** Next.js, TypeScript, Tailwind
-- **Backend:** Express, Drizzle, PostgreSQL, Redis
-- **Datos deportivos:** Bzzoiro API
-- **Infra local:** Docker Compose
+This app is built with:
+- **Next.js + TypeScript** for the frontend.
+- **Express + Drizzle + PostgreSQL** for the backend.
+- **Tailwind + HeroUI** for the visual interface.
+- **Google OAuth → JWT** for authentication (stored in localStorage).
+- **Bzzoiro BSD** as the primary source for fixtures and results.
+- **Docker Compose** for local infrastructure.
 
-## Features (visión)
+## Local development
 
-- Fixtures y resultados por torneo
-- Predicciones y ranking
-- Miniligas con invitaciones
-- Auth (local + Google OAuth)
+Step-by-step guide (branch, `envs/`, Docker, seed, frontend): [DEVELOPMENT_GUIDE.md](./DEVELOPMENT_GUIDE.md)
 
-## Roadmap de alto nivel
-- **Fase 1 (MVP):** foco en predicciones + ranking.
-- **Fase 2:** miniligas y panel administrativo.
-- **Fase 3:** módulo estadístico completo y expansión multi-torneo.
+Quick summary:
 
-> Objetivo: la versión inicial estará ideada para terminarse antes del inicio del Mundial 2026,
-> y luego evolucionará como producto reusable para otros torneos.
+1. Copy `envs/back/.env` → `backend/.env` and `envs/front/.env` → `frontend/.env`
+2. `docker compose up -d` (API available at `http://localhost:4000`)
+3. `docker compose run --rm --no-deps migrate pnpm seed`
+4. `cd frontend && npm run dev` → `http://localhost:3000`
+
+## High-level roadmap
+- **Phase 1 (MVP):** focus on predictions + ranking.
+- **Phase 2:** mini leagues and admin panel.
+- **Phase 3:** full statistics module and multi-tournament expansion.
+
+> Goal: the initial version is aimed to be finished before the 2026 World Cup kicks off,
+> and will then evolve into a reusable product for other tournaments.

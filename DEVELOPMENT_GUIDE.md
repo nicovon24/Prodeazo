@@ -1,79 +1,71 @@
-# Guía de desarrollo — Prodeazo
+# Development Guide — Prodeazo
 
-## Requisitos Previos
+## Prerequisites
 
 - **Node.js** v20+
-- **Docker Desktop** (DB y Backend corren en Docker)
-- **pnpm** (`npm i -g pnpm`)
+- **Docker Desktop** (Postgres and backend run in containers)
 - **Git**
+- **`envs/`** folder with the real `.env` files from the team (not committed to the repo)
 
 ---
 
-## Requisitos
-
-- **Node.js** v20+
-- **Docker Desktop** (Postgres, Redis y backend en contenedores)
-- **Git**
-- Carpeta **`envs/`** con los `.env` reales del equipo (no están en el repo)
-
----
-
-## 1. Clonar y cambiar de rama
+## 1. Clone and switch branch
 
 ```bash
 git clone <repo>
 cd Prodeazo
-git fetch origin feat/frontend
-git checkout feat/frontend
+git fetch origin feat/functionality
+git checkout feat/functionality
 ```
 
-Para alinear el directorio con el remoto (descarta cambios locales):
+To align your local branch with the remote (discards local changes):
 
 ```bash
-git checkout -B feat/frontend origin/feat/frontend
+git checkout -B feat/functionality origin/feat/functionality
 ```
 
 ---
 
-## 2. Variables de entorno (obligatorio: copiar desde `envs/`)
+## 2. Environment variables (required: copy from `envs/`)
 
-Los archivos reales viven en **`envs/`**. Hay que copiarlos tal cual a donde los lee cada app:
+The real env files live in **`envs/`**. Copy them exactly to where each app reads them:
 
-| Origen | Destino |
-|--------|---------|
+| Source | Destination |
+|--------|-------------|
 | `envs/back/.env` | `backend/.env` |
 | `envs/front/.env` | `frontend/.env` |
 
-**PowerShell (desde la raíz del repo):**
+**PowerShell (from the repo root):**
 
 ```powershell
 Copy-Item -Path "envs\back\.env" -Destination "backend\.env" -Force
 Copy-Item -Path "envs\front\.env" -Destination "frontend\.env" -Force
 ```
 
-**Reglas importantes:**
+**Important rules:**
 
-- No editar puertos ni URLs de OAuth “a mano” si no lo pide el equipo. El login con Google depende de que coincidan:
-  - `NEXT_PUBLIC_API_URL` en frontend (típicamente `http://localhost:4000`)
-  - URI de redirección en Google Cloud: `http://localhost:4000/api/auth/callback`
-- Los `.env` en `backend/` y `frontend/` deben ser **copias exactas** de `envs/`. Si alguien te pasa envs nuevos, volvé a copiar encima.
-- La carpeta `envs/` puede quedarse como respaldo local; no se commitea (está en `.gitignore` junto con `backend/.env` y `frontend/.env`).
+> Auth uses JWT (migrated from cookie-session in May 2026). `SESSION_SECRET`, `COOKIE_SECURE`, `TOURNAMENT_ID`, and `BZZOIRO_LEAGUE_ID` are no longer needed. See `ARCHITECTURE.md` ADR-001.
 
-**Comprobar que son iguales (opcional):**
+- Do not manually change ports or OAuth URLs unless the team asks. Google login depends on these matching:
+  - `NEXT_PUBLIC_API_URL` in frontend (typically `http://localhost:4000`)
+  - Redirect URI in Google Cloud: `http://localhost:4000/api/auth/callback`
+- The `.env` files in `backend/` and `frontend/` must be **exact copies** of `envs/`. If someone sends you updated envs, copy them over again.
+- The `envs/` folder can stay as a local backup; it is not committed (it is in `.gitignore` along with `backend/.env` and `frontend/.env`).
+
+**Verify they are identical (optional):**
 
 ```powershell
-# Mismo tamaño y contenido byte a byte
 (Get-FileHash "envs\back\.env").Hash -eq (Get-FileHash "backend\.env").Hash
 (Get-FileHash "envs\front\.env").Hash -eq (Get-FileHash "frontend\.env").Hash
 ```
 
-> **Nota sobre la base de datos:** el `DATABASE_URL` del `.env` del compañero puede apuntar a otro puerto (ej. `5433`). Docker Compose **sobrescribe** la conexión dentro de los contenedores (`5432`, host `db`). Por eso el **seed** debe correrse con Docker (ver sección 4), no con `npm run seed` en el host si tu `.env` no apunta al Postgres de Docker.
+> **Note on the database:** a teammate's `DATABASE_URL` might point to a different port (e.g. `5433`). Docker Compose **overrides** the connection inside the containers (`5432`, host `db`). That is why the **seed** must be run via Docker (see section 4), not with `npm run seed` on the host if your `.env` does not point to the Docker Postgres.
 
 ---
 
-## 3. Instalar dependencias (frontend en el host)
+## 3. Install dependencies (frontend on the host)
 
-En la raíz solo hay un workspace mínimo. Instalá en cada carpeta:
+The root only has a minimal workspace. Install inside each folder:
 
 ```bash
 cd backend
@@ -83,19 +75,19 @@ cd ../frontend
 npm install
 ```
 
-(`pnpm` también sirve si lo tenés; en Windows muchas veces se usa `npm`.)
+(`pnpm` works too if you have it; on Windows `npm` is often more reliable.)
 
 ---
 
-## 4. Docker: levantar infraestructura
+## 4. Docker: start the infrastructure
 
-Desde la **raíz del repo**:
+From the **repo root**:
 
 ```bash
 docker compose up -d
 ```
 
-Verificar:
+Verify:
 
 ```bash
 docker compose ps
@@ -103,7 +95,7 @@ curl http://localhost:4000/api/health
 # → {"ok":true}
 ```
 
-### Reconstruir desde cero (imágenes y volúmenes viejos)
+### Rebuild from scratch (stale images / volumes)
 
 ```bash
 docker compose down -v --remove-orphans
@@ -111,13 +103,13 @@ docker compose build --no-cache
 docker compose up -d
 ```
 
-`down -v` borra la DB; después hay que volver a correr el **seed** (sección 5).
+`down -v` wipes the DB; you will need to re-run the **seed** (section 5) afterwards.
 
-### Puerto 4000 bloqueado en Windows
+### Port 4000 blocked on Windows
 
-Si `docker compose up` falla con *“bind … 4000”* o *“socket no permitido”*, Windows suele reservar el rango **4000–4099**. **No cambies** el puerto del backend ni del frontend para OAuth.
+If `docker compose up` fails with *"bind … 4000"* or *"socket not permitted"*, Windows often reserves the range **4000–4099**. **Do not change** the backend or frontend port for OAuth.
 
-Abrí **PowerShell como administrador** y ejecutá:
+Open **PowerShell as Administrator** and run:
 
 ```powershell
 netsh int ipv4 set dynamicport tcp start=49152 num=16384
@@ -126,47 +118,47 @@ net stop winnat
 net start winnat
 ```
 
-Luego, en una terminal normal:
+Then, in a normal terminal:
 
 ```bash
 docker compose up -d
 ```
 
-### Google Cloud Console (referencia)
+### Google Cloud Console (reference)
 
-Orígenes JS autorizados: `http://localhost:3000`, `http://localhost:4000`  
-URI de redirección: `http://localhost:4000/api/auth/callback`
+Authorised JS origins: `http://localhost:3000`, `http://localhost:4000`  
+Redirect URI: `http://localhost:4000/api/auth/callback`
 
 ---
 
-## 5. Seed de torneos (Mundial 2026 + Premier League)
+## 5. Tournament seed (World Cup 2026 + Premier League)
 
-Torneos definidos en `backend/src/scripts/tournaments.config.ts` (por defecto: **FIFA World Cup 2026** y **Premier League 2025/26**).
+Tournaments are defined in `backend/src/scripts/tournaments.config.ts` (defaults: **FIFA World Cup 2026** and **Premier League 2025/26**).
 
-**Siempre correr el seed dentro de Docker** (usa la DB del compose y la API key del `.env` montado):
+**Always run the seed inside Docker** (uses the compose DB and the `.env` API key mounted there):
 
 ```bash
-# Desde la raíz del repo
+# From the repo root
 docker compose run --rm --no-deps migrate pnpm seed
 ```
 
-Esto:
+This:
 
-1. Crea/actualiza registros en la tabla `tournaments`
-2. Carga equipos y fixtures desde Bzzoiro
-3. Habilita el selector de torneo en **Fixture** (cuando hay más de un torneo)
+1. Creates / updates records in the `tournaments` table
+2. Loads teams and fixtures from Bzzoiro
+3. Enables the tournament selector in **Fixture** (when more than one tournament exists)
 
-Datos de prueba sin API key:
+Test data without an API key:
 
 ```bash
 docker compose run --rm --no-deps migrate pnpm seed:mock
 ```
 
-Para agregar otro torneo, editá `tournaments.config.ts` y volvé a ejecutar el mismo comando.
+To add another tournament, edit `tournaments.config.ts` and run the same command again.
 
 ---
 
-## 6. Frontend (desarrollo en el host)
+## 6. Frontend (local development on the host)
 
 ```bash
 cd frontend
@@ -176,51 +168,51 @@ npm run dev
 App: [http://localhost:3000](http://localhost:3000)  
 API (Docker): [http://localhost:4000](http://localhost:4000)
 
-Reiniciá `npm run dev` después de cambiar `frontend/.env`.
+Restart `npm run dev` after changing `frontend/.env`.
 
 ---
 
-## 7. Flujo completo (resumen)
+## 7. Full flow (summary)
 
 ```text
-1. git checkout feat/frontend
-2. Copiar envs/back/.env → backend/.env y envs/front/.env → frontend/.env
-3. npm install en backend/ y frontend/
+1. git checkout feat/functionality
+2. Copy envs/back/.env → backend/.env  and  envs/front/.env → frontend/.env
+3. npm install in backend/ and frontend/
 4. docker compose up -d
 5. docker compose run --rm --no-deps migrate pnpm seed
 6. cd frontend && npm run dev
-7. Login (Google) → Fixture → selector de torneo
+7. Login (Google) → Fixture → tournament selector
 ```
 
 ---
 
-## Comandos útiles
+## Useful commands
 
 ```bash
 docker compose logs -f backend
 docker compose up --build -d backend
 docker compose restart
-docker compose down          # apaga, mantiene volúmenes
-docker compose down -v       # apaga y borra DB (re-seed después)
+docker compose down          # stop, keep volumes
+docker compose down -v       # stop and wipe DB (re-seed afterwards)
 ```
 
 ---
 
-## Solución de problemas
+## Troubleshooting
 
-| Problema | Qué revisar |
-|----------|-------------|
-| `redirect_uri_mismatch` (Google) | Puertos 4000/3000 sin cambiar; `.env` copiados desde `envs/`; URI en Google Console |
-| Seed falla con `ECONNREFUSED` en el host | Usar `docker compose run … pnpm seed`, no `npm run seed` en `backend/` |
-| Backend no arranca en 4000 | Rango reservado en Windows (sección 3) |
-| Fixture sin partidos | Seed no corrido o torneo sin datos en Bzzoiro |
-| Placeholders en Mundial (W101, 1A…) | Normal hasta que Bzzoiro tenga naciones reales; re-ejecutar seed |
+| Problem | What to check |
+|---------|---------------|
+| `redirect_uri_mismatch` (Google) | Ports 4000/3000 unchanged; `.env` copied from `envs/`; URI in Google Console |
+| Seed fails with `ECONNREFUSED` on host | Use `docker compose run … pnpm seed`, not `npm run seed` in `backend/` |
+| Backend won't start on 4000 | Reserved port range on Windows (section 3) |
+| Fixture has no matches | Seed not run or tournament has no data in Bzzoiro |
+| Placeholders in World Cup (W101, 1A…) | Normal until Bzzoiro has real nations; re-run seed |
 
 ---
 
-## Torneos — agregar uno nuevo
+## Tournaments — adding a new one
 
-Editá `backend/src/scripts/tournaments.config.ts` y buscá `leagueId` / `seasonId` en la API Bzzoiro. Luego:
+Edit `backend/src/scripts/tournaments.config.ts` and find the `leagueId` / `seasonId` in the Bzzoiro API. Then:
 
 ```bash
 docker compose run --rm --no-deps migrate pnpm seed
