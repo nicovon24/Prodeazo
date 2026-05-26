@@ -5,6 +5,8 @@ export interface Prediction {
   fixtureId: number
   homeGoals: number
   awayGoals: number
+  points: number | null
+  createdAt?: string | null
 }
 
 export async function fetchPredictions(tournamentId?: string | null): Promise<Prediction[]> {

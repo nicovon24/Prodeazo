@@ -7,3 +7,7 @@ frontend/.next/
 REVIEW.md
 /backend/REVIEW.md
 /frontend/REVIEW.md
+planning/
+/.planning/
+envs/
+anotations.md

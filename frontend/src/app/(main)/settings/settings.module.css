@@ -4,6 +4,95 @@
   display: flex;
   flex-direction: column;
   gap: 24px;
+  position: relative;
+}
+
+.toast {
+  position: fixed;
+  top: 28px;
+  right: 28px;
+  z-index: 120;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  width: min(420px, calc(100vw - 56px));
+  padding: 16px;
+  border-radius: 10px;
+  box-shadow: 0 22px 60px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.04) inset;
+  overflow: hidden;
+}
+
+.toast::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+}
+
+.toastSuccess {
+  background: #111a12;
+  border: 1px solid rgba(0, 206, 23, 0.32);
+  color: #f1fff5;
+}
+
+.toastSuccess::before {
+  background: var(--color-green-normal, #00ce17);
+}
+
+.toastError {
+  background: #1e1112;
+  border: 1px solid rgba(213, 2, 4, 0.36);
+  color: #fff0f0;
+}
+
+.toastError::before {
+  background: var(--color-tertiary-red, #d50204);
+}
+
+.toastIconWrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.toastSuccess .toastIconWrap {
+  background: rgba(0, 206, 23, 0.13);
+  color: var(--color-green-normal, #00ce17);
+}
+
+.toastError .toastIconWrap {
+  background: rgba(213, 2, 4, 0.15);
+  color: #ff5c5c;
+}
+
+.toastIcon {
+  width: 21px;
+  height: 21px;
+}
+
+.toastContent {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.toastTitle {
+  color: #fff;
+  font-size: 0.92rem;
+  font-weight: 900;
+  line-height: 1.25;
+}
+
+.toastMessage {
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1.35;
 }
 
 .layout {
@@ -235,6 +324,12 @@
   box-shadow: 0 0 0 2px rgba(175, 232, 5, 0.15);
 }
 
+.fieldInputError,
+.fieldInputError:focus {
+  border-color: rgba(255, 92, 92, 0.7);
+  box-shadow: 0 0 0 2px rgba(213, 2, 4, 0.16);
+}
+
 .fieldInput:disabled {
   opacity: 0.65;
   cursor: not-allowed;
@@ -244,6 +339,13 @@
   font-size: 0.72rem;
   color: rgba(255, 255, 255, 0.4);
   margin-top: 6px;
+}
+
+.fieldError {
+  font-size: 0.72rem;
+  color: #ff9a9a;
+  margin-top: 6px;
+  line-height: 1.35;
 }
 
 .saveRow {
@@ -290,7 +392,7 @@
   text-align: center;
   font-size: 0.85rem;
   color: #fca5a5;
-  margin-top: 12px;
+  margin: 12px 0 18px;
 }
 
 /* ── Security rows ── */

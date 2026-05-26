@@ -1,11 +1,12 @@
 "use client";
 
 import { ChevronUp, ChevronDown } from "lucide-react";
+import type { ChangeEvent } from "react";
 import styles from "./ScoreInput.module.css";
 
 interface ScoreInputProps {
   value: number | null;
-  onChange: (newValue: number) => void;
+  onChange: (newValue: number | null) => void;
   readonly?: boolean;
 }
 
@@ -19,13 +20,25 @@ export function ScoreInput({ value, onChange, readonly = false }: ScoreInputProp
   }
 
   const handleIncrement = () => {
-    onChange(value === null ? 0 : value + 1);
+    onChange(value === null ? 1 : Math.min(20, value + 1));
   };
 
   const handleDecrement = () => {
     if (value !== null && value > 0) {
       onChange(value - 1);
     }
+  };
+
+  const handleInputChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const raw = event.target.value.trim();
+    if (raw === "") {
+      onChange(null);
+      return;
+    }
+
+    const parsed = Number(raw.replace(/\D/g, ""));
+    if (Number.isNaN(parsed)) return;
+    onChange(Math.min(20, Math.max(0, parsed)));
   };
 
   return (
@@ -39,9 +52,16 @@ export function ScoreInput({ value, onChange, readonly = false }: ScoreInputProp
         <ChevronUp className={styles.btnIcon} />
       </button>
       
-      <div className={styles.value}>
-        {value === null ? "-" : value}
-      </div>
+      <input
+        className={styles.value}
+        value={value === null ? "" : value}
+        onChange={handleInputChange}
+        inputMode="numeric"
+        pattern="[0-9]*"
+        maxLength={2}
+        placeholder="-"
+        aria-label="Goles"
+      />
 
       <button 
         type="button" 

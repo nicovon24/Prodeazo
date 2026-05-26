@@ -1,9 +1,11 @@
 "use client";
 
-import { FormEvent, useEffect, useState, useRef } from "react";
+import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { 
   Camera, 
+  AlertCircle,
+  CheckCircle2,
   Construction, 
   LogOut, 
   UserCircle, 
@@ -13,6 +15,7 @@ import {
   ShieldCheck,
   Trash2
 } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
 import clsx from "clsx";
 import { Header } from "@/components/layout/Header";
 import { useAuth } from "@/hooks/useAuth";
@@ -21,6 +24,13 @@ import { updateProfile, changePassword, deleteAccount } from "@/api/user";
 import styles from "./settings.module.css";
 
 type SettingsTab = "account" | "notifications" | "payments";
+type ToastTone = "success" | "error";
+
+interface ToastState {
+  tone: ToastTone;
+  title: string;
+  message: string;
+}
 
 const TABS: { id: SettingsTab; title: string; description: string; icon: any }[] = [
   { id: "account", title: "Mi cuenta", description: "Datos personales y seguridad.", icon: UserCircle },
@@ -37,6 +47,32 @@ function splitName(fullName: string) {
 
 function joinName(firstName: string, lastName: string) {
   return [firstName.trim(), lastName.trim()].filter(Boolean).join(" ");
+}
+
+function isValidEmail(email: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+function isValidNamePart(value: string, required: boolean) {
+  const trimmed = value.trim();
+  if (!trimmed) return !required;
+  return /^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ' -]{2,50}$/.test(trimmed);
+}
+
+function translateApiError(error: unknown, fallback: string) {
+  if (!(error instanceof ApiError)) return fallback;
+
+  const message = error.message.toLowerCase();
+  if (error.code === "UNAUTHORIZED" || message.includes("current password")) {
+    return "La contraseña actual no es correcta.";
+  }
+  if (error.code === "FORBIDDEN" || message.includes("password cannot be changed")) {
+    return "No se puede cambiar la contraseña de esta cuenta.";
+  }
+  if (error.code === "VALIDATION_ERROR") {
+    return "Revisá los datos ingresados e intentá nuevamente.";
+  }
+  return error.message || fallback;
 }
 
 function getInitials(name: string) {
@@ -69,8 +105,7 @@ export default function SettingsPage() {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [saving, setSaving] = useState(false);
-  const [saveMessage, setSaveMessage] = useState<string | null>(null);
-  const [saveError, setSaveError] = useState<string | null>(null);
+  const [toast, setToast] = useState<ToastState | null>(null);
 
   const [passwordOpen, setPasswordOpen] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
@@ -86,6 +121,22 @@ export default function SettingsPage() {
     firstName !== splitName(user.name).firstName ||
     lastName !== splitName(user.name).lastName
   );
+  const validation = useMemo(() => {
+    const errors: { firstName?: string; lastName?: string; email?: string } = {};
+
+    if (!isValidNamePart(firstName, true)) {
+      errors.firstName = "Ingresá un nombre válido de al menos 2 letras.";
+    }
+    if (!isValidNamePart(lastName, false)) {
+      errors.lastName = "Usá solo letras, espacios, apóstrofes o guiones.";
+    }
+    if (user?.email && !isValidEmail(user.email)) {
+      errors.email = "El correo asociado a tu cuenta no tiene un formato válido.";
+    }
+
+    return errors;
+  }, [firstName, lastName, user?.email]);
+  const hasValidationErrors = Object.keys(validation).length > 0;
 
   useEffect(() => {
     if (!user || !user.name) return;
@@ -98,28 +149,41 @@ export default function SettingsPage() {
     }
   }, [user]);
 
+  useEffect(() => {
+    if (!toast) return;
+    const timeout = window.setTimeout(() => setToast(null), 3600);
+    return () => window.clearTimeout(timeout);
+  }, [toast]);
+
   async function handleSaveProfile(event: FormEvent) {
     event.preventDefault();
-    setSaveMessage(null);
-    setSaveError(null);
+    if (!user) return;
 
     const name = joinName(firstName, lastName);
-    if (!name) {
-      setSaveError("Ingresá al menos tu nombre.");
+    if (!name || hasValidationErrors) {
+      setToast({
+        tone: "error",
+        title: "Revisá tus datos",
+        message: "Hay campos que necesitan corrección antes de guardar.",
+      });
       return;
     }
 
     setSaving(true);
     try {
-      const updated = await updateProfile(name, user?.avatar);
+      const updated = await updateProfile(name, user.avatar ?? undefined);
       setUser(updated);
-      setSaveMessage("Cambios guardados correctamente.");
+      setToast({
+        tone: "success",
+        title: "Cambios guardados",
+        message: "Tu información personal se actualizó correctamente.",
+      });
     } catch (error) {
-      setSaveError(
-        error instanceof ApiError
-          ? error.message
-          : "No pudimos guardar los cambios. Intentá de nuevo."
-      );
+      setToast({
+        tone: "error",
+        title: "No pudimos guardar",
+        message: translateApiError(error, "No pudimos guardar los cambios. Intentá de nuevo."),
+      });
     } finally {
       setSaving(false);
     }
@@ -145,17 +209,19 @@ export default function SettingsPage() {
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
-      setSaveMessage("Contraseña actualizada correctamente.");
+      setToast({
+        tone: "success",
+        title: "Contraseña actualizada",
+        message: "Tu contraseña se cambió correctamente.",
+      });
     } catch (error) {
-      if (error instanceof ApiError && error.code === "UNAUTHORIZED") {
-        setPasswordError("La contraseña actual no es correcta.");
-      } else {
-        setPasswordError(
-          error instanceof ApiError
-            ? error.message
-            : "No pudimos cambiar la contraseña."
-        );
-      }
+      const message = translateApiError(error, "No pudimos cambiar la contraseña.");
+      setPasswordError(message);
+      setToast({
+        tone: "error",
+        title: "No pudimos cambiarla",
+        message,
+      });
     } finally {
       setPasswordSaving(false);
     }
@@ -175,7 +241,11 @@ export default function SettingsPage() {
       await deleteAccount();
       router.push("/login");
     } catch (error) {
-      alert("No se pudo eliminar la cuenta. Intentá de nuevo.");
+      setToast({
+        tone: "error",
+        title: "No pudimos eliminar la cuenta",
+        message: "Intentá nuevamente en unos minutos.",
+      });
     }
   }
 
@@ -183,12 +253,16 @@ export default function SettingsPage() {
     fileInputRef.current?.click();
   };
 
-  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
     if (file.size > 2 * 1024 * 1024) {
-      setSaveError("La imagen es muy pesada (máx 2MB).");
+      setToast({
+        tone: "error",
+        title: "Imagen demasiado pesada",
+        message: "El archivo no puede superar los 2 MB.",
+      });
       return;
     }
 
@@ -199,9 +273,17 @@ export default function SettingsPage() {
       try {
         const updated = await updateProfile(user?.name || "", base64);
         setUser(updated);
-        setSaveMessage("Avatar actualizado.");
+        setToast({
+          tone: "success",
+          title: "Avatar actualizado",
+          message: "Tu nueva imagen de perfil ya está guardada.",
+        });
       } catch (error) {
-        setSaveError("No se pudo actualizar el avatar.");
+        setToast({
+          tone: "error",
+          title: "No pudimos actualizar el avatar",
+          message: "Intentá con otra imagen o probá nuevamente.",
+        });
       } finally {
         setSaving(false);
       }
@@ -219,6 +301,31 @@ export default function SettingsPage() {
       />
 
       <main className={styles.main}>
+        <AnimatePresence>
+          {toast && (
+            <motion.div
+              className={`${styles.toast} ${toast.tone === "success" ? styles.toastSuccess : styles.toastError}`}
+              initial={{ opacity: 0, y: -16, scale: 0.96 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -12, scale: 0.98 }}
+              transition={{ duration: 0.22, ease: "easeOut" }}
+              role="status"
+            >
+              <span className={styles.toastIconWrap}>
+                {toast.tone === "success" ? (
+                  <CheckCircle2 className={styles.toastIcon} />
+                ) : (
+                  <AlertCircle className={styles.toastIcon} />
+                )}
+              </span>
+              <span className={styles.toastContent}>
+                <span className={styles.toastTitle}>{toast.title}</span>
+                <span className={styles.toastMessage}>{toast.message}</span>
+              </span>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         <div className={styles.layout}>
           <nav className={styles.subNav} aria-label="Secciones de configuración">
             {TABS.map(({ id, title, description, icon: Icon }) => (
@@ -293,12 +400,19 @@ export default function SettingsPage() {
                           </label>
                           <input
                             id="firstName"
-                            className={styles.fieldInput}
+                            className={clsx(styles.fieldInput, validation.firstName && styles.fieldInputError)}
                             value={firstName}
                             onChange={(e) => setFirstName(e.target.value)}
                             autoComplete="given-name"
                             maxLength={50}
+                            aria-invalid={Boolean(validation.firstName)}
+                            aria-describedby={validation.firstName ? "firstName-error" : undefined}
                           />
+                          {validation.firstName && (
+                            <p id="firstName-error" className={styles.fieldError}>
+                              {validation.firstName}
+                            </p>
+                          )}
                         </div>
                         <div>
                           <label className={styles.fieldLabel} htmlFor="lastName">
@@ -306,12 +420,19 @@ export default function SettingsPage() {
                           </label>
                           <input
                             id="lastName"
-                            className={styles.fieldInput}
+                            className={clsx(styles.fieldInput, validation.lastName && styles.fieldInputError)}
                             value={lastName}
                             onChange={(e) => setLastName(e.target.value)}
                             autoComplete="family-name"
                             maxLength={50}
+                            aria-invalid={Boolean(validation.lastName)}
+                            aria-describedby={validation.lastName ? "lastName-error" : undefined}
                           />
+                          {validation.lastName && (
+                            <p id="lastName-error" className={styles.fieldError}>
+                              {validation.lastName}
+                            </p>
+                          )}
                         </div>
                         <div className={styles.fieldFull}>
                           <label className={styles.fieldLabel} htmlFor="email">
@@ -319,15 +440,23 @@ export default function SettingsPage() {
                           </label>
                           <input
                             id="email"
-                            className={styles.fieldInput}
+                            type="email"
+                            className={clsx(styles.fieldInput, validation.email && styles.fieldInputError)}
                             value={user.email}
                             disabled
                             readOnly
+                            aria-invalid={Boolean(validation.email)}
+                            aria-describedby={validation.email ? "email-error" : "email-hint"}
                           />
-                          <p className={styles.fieldHint}>
+                          <p id="email-hint" className={styles.fieldHint}>
                             El correo no se puede modificar porque es tu identificador de
                             acceso.
                           </p>
+                          {validation.email && (
+                            <p id="email-error" className={styles.fieldError}>
+                              {validation.email}
+                            </p>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -336,7 +465,7 @@ export default function SettingsPage() {
                       <button
                         type="submit"
                         className={styles.saveBtn}
-                        disabled={saving || !isChanged}
+                        disabled={saving || !isChanged || hasValidationErrors}
                       >
                         {saving ? (
                           <div className={styles.loader} />
@@ -345,16 +474,6 @@ export default function SettingsPage() {
                         )}
                       </button>
                     </div>
-                    {saveMessage && (
-                      <p className={styles.successMsg} role="status">
-                        {saveMessage}
-                      </p>
-                    )}
-                    {saveError && (
-                      <p className={styles.errorMsg} role="alert">
-                        {saveError}
-                      </p>
-                    )}
                   </section>
                 </form>
 
@@ -487,11 +606,12 @@ export default function SettingsPage() {
                   <input
                     id="currentPassword"
                     type="password"
-                    className={styles.fieldInput}
-                    value={currentPassword}
-                    onChange={(e) => setCurrentPassword(e.target.value)}
-                    autoComplete="current-password"
-                    required
+                  className={styles.fieldInput}
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  autoComplete="current-password"
+                  minLength={1}
+                  required
                   />
                 </div>
                 <div>
@@ -541,7 +661,7 @@ export default function SettingsPage() {
                 <button
                   type="submit"
                   className={styles.modalSubmit}
-                  disabled={passwordSaving}
+                  disabled={passwordSaving || !currentPassword || newPassword.length < 8 || confirmPassword.length < 8}
                 >
                   {passwordSaving ? "Guardando..." : "Guardar"}
                 </button>

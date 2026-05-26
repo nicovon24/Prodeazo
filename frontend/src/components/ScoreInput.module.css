@@ -50,6 +50,21 @@
   line-height: 1;
   padding: 2px 0;
   text-align: center;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  outline: none;
+  appearance: textfield;
+}
+
+.value::placeholder {
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.value::-webkit-outer-spin-button,
+.value::-webkit-inner-spin-button {
+  margin: 0;
+  appearance: none;
 }
 
 .readonly {

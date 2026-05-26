@@ -127,19 +127,16 @@ export async function changePassword(req: Request, res: Response) {
     return res.status(400).json(err('VALIDATION_ERROR', parsed.error.issues[0]?.message ?? 'Invalid input'))
   }
 
-  const sessionUser = req.user as { id: string; passwordHash?: string | null; authProvider?: string }
-  if (sessionUser.authProvider === 'google' || !sessionUser.passwordHash) {
-    return res.status(403).json(err('FORBIDDEN', 'Password cannot be changed for this account'))
-  }
+  const sessionUser = req.user as { id: string; authProvider?: string }
 
   const [user] = await db.select().from(users).where(eq(users.id, sessionUser.id)).limit(1)
   if (!user?.passwordHash) {
-    return res.status(403).json(err('FORBIDDEN', 'Password cannot be changed for this account'))
+    return res.status(403).json(err('FORBIDDEN', 'No se puede cambiar la contraseña de esta cuenta'))
   }
 
   const match = await bcrypt.compare(parsed.data.currentPassword, user.passwordHash)
   if (!match) {
-    return res.status(401).json(err('UNAUTHORIZED', 'Current password is incorrect'))
+    return res.status(401).json(err('UNAUTHORIZED', 'La contraseña actual no es correcta'))
   }
 
   const passwordHash = await bcrypt.hash(parsed.data.newPassword, 10)

@@ -29,6 +29,39 @@
   color: var(--color-secondary);
 }
 
+html {
+  scrollbar-gutter: stable;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(175, 232, 5, 0.65) rgba(255, 255, 255, 0.05);
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(175, 232, 5, 0.92), rgba(0, 206, 23, 0.74));
+  border: 2px solid rgba(10, 14, 12, 0.92);
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, var(--color-primary), var(--color-green-normal));
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
 .text-primary { color: var(--color-primary); }
 .bg-primary { background-color: var(--color-primary); }
 .border-primary\/40 { border-color: rgba(175, 232, 5, 0.4); }
