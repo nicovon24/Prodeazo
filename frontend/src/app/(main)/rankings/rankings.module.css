@@ -159,7 +159,7 @@
 
 .tableHead {
   display: grid;
-  grid-template-columns: 80px 3fr 1fr 1fr 1fr;
+  grid-template-columns: 80px 3fr 1fr;
   padding: 12px 24px;
   font-size: 0.7rem;
   font-weight: 700;
@@ -170,7 +170,7 @@
 
 .tableRow {
   display: grid;
-  grid-template-columns: 80px 3fr 1fr 1fr 1fr;
+  grid-template-columns: 80px 3fr 1fr;
   padding: 16px 24px;
   align-items: center;
   border-bottom: 1px solid rgba(255, 255, 255, 0.02);

@@ -534,3 +534,268 @@
 .exploreJoinBtn:hover {
   background-color: rgba(255, 255, 255, 0.1);
 }
+
+/* ── Action card as button ── */
+.actionCard {
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+}
+
+/* ── Empty state ── */
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 48px 24px;
+  background-color: rgba(255, 255, 255, 0.02);
+  border: 1px dashed rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  text-align: center;
+}
+
+.emptyStateIcon {
+  width: 40px;
+  height: 40px;
+  color: rgba(255, 255, 255, 0.2);
+}
+
+.emptyStateText {
+  font-size: 1rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.emptyStateSubtext {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+/* ── Explore coming soon ── */
+.exploreComingSoon {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 64px 24px;
+  text-align: center;
+}
+
+.exploreComingSoonIcon {
+  width: 48px;
+  height: 48px;
+  color: rgba(255, 255, 255, 0.2);
+}
+
+.exploreComingSoonTitle {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.exploreComingSoonText {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.5);
+  max-width: 400px;
+}
+
+.exploreComingSoonBtn {
+  padding: 10px 24px;
+  background-color: transparent;
+  border: 1px solid rgba(175, 232, 5, 0.3);
+  border-radius: 8px;
+  color: var(--color-primary);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.exploreComingSoonBtn:hover {
+  background-color: rgba(175, 232, 5, 0.1);
+}
+
+/* ── Modal ── */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: 24px;
+}
+
+.modalCard {
+  background: #111217;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 32px;
+  width: 100%;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.modalTitle {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #fff;
+  margin: 0;
+}
+
+.modalField {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.modalLabel {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.6);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.modalInput {
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  padding: 12px 16px;
+  color: #fff;
+  font-size: 0.95rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.modalInput:focus {
+  border-color: rgba(175, 232, 5, 0.4);
+}
+
+.modalError {
+  font-size: 0.8rem;
+  color: #ff6b6b;
+  font-weight: 500;
+}
+
+.modalActions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.modalBtnSecondary {
+  padding: 10px 20px;
+  background-color: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.modalBtnSecondary:hover:not(:disabled) {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.modalBtnSecondary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.modalBtnPrimary {
+  padding: 10px 24px;
+  background-color: var(--color-primary);
+  border: none;
+  border-radius: 8px;
+  color: #000;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.modalBtnPrimary:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.modalBtnPrimary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ── Toast ── */
+.toast {
+  position: fixed;
+  top: 28px;
+  right: 28px;
+  z-index: 120;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  width: min(420px, calc(100vw - 56px));
+  padding: 16px;
+  border-radius: 10px;
+  box-shadow: 0 22px 60px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.04) inset;
+  overflow: hidden;
+}
+
+.toast::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+}
+
+.toastSuccess {
+  background: #111a12;
+  border: 1px solid rgba(0, 206, 23, 0.32);
+  color: #f1fff5;
+}
+
+.toastSuccess::before {
+  background: var(--color-green-normal, #00ce17);
+}
+
+.toastError {
+  background: #1e1112;
+  border: 1px solid rgba(213, 2, 4, 0.36);
+  color: #fff0f0;
+}
+
+.toastError::before {
+  background: var(--color-tertiary-red, #d50204);
+}
+
+.toastIconWrap {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.toastIcon {
+  width: 20px;
+  height: 20px;
+}
+
+.toastContent {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.toastTitle {
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.toastMessage {
+  font-size: 0.8rem;
+  opacity: 0.85;
+}

@@ -7,6 +7,8 @@ const router = Router()
 
 router.use(requireAuth)
 
+router.get('/me/history', asyncHandler(leaderboardController.meHistory))
+router.get('/me', asyncHandler(leaderboardController.me))
 router.get('/', asyncHandler(leaderboardController.list))
 
 export default router

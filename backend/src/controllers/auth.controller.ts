@@ -3,12 +3,22 @@ import type { Request, Response, NextFunction } from 'express'
 import { z } from 'zod'
 import bcrypt from 'bcrypt'
 import passport from '../config/passport'
-import { db } from '../db/client'
-import { users } from '../db/schema'
-import { eq } from 'drizzle-orm'
 import { err } from '../utils/apiError'
 import { signToken } from '../utils/jwt'
 import { getCache, setCache, deleteCache } from '../services/cache.service'
+import * as passwordResetModel from '../models/password-reset.model'
+import * as userModel from '../models/user.model'
+import { sendPasswordResetEmail } from '../services/email.service'
+import { env } from '../env'
+
+const forgotPasswordSchema = z.object({
+  email: z.string().email(),
+})
+
+const resetPasswordSchema = z.object({
+  token: z.string().min(1),
+  password: z.string().min(8),
+})
 
 const registerSchema = z.object({
   email: z.string().email(),
@@ -52,7 +62,7 @@ function userToPublic(user: Express.User) {
  * The frontend exchanges the code for the real JWT via GET /api/auth/exchange.
  */
 export function oauthCallbackSuccess(req: Request, res: Response) {
-  if (process.env.NODE_ENV !== 'production') {
+  if (env.NODE_ENV !== 'production') {
     console.log('[auth] OAuth callback success, user:', req.user?.id)
   }
 
@@ -60,8 +70,7 @@ export function oauthCallbackSuccess(req: Request, res: Response) {
   const code = randomUUID()
   setCache(`oauth_code:${code}`, token, 60)
 
-  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000'
-  res.redirect(`${frontendUrl}/auth/callback?code=${code}`)
+  res.redirect(`${env.FRONTEND_URL}/auth/callback?code=${code}`)
 }
 
 /**
@@ -89,7 +98,7 @@ export function logout(_req: Request, res: Response) {
 
 export async function me(req: Request, res: Response) {
   const userId = (req.user as { id: string }).id
-  const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1)
+  const user = await userModel.findById(userId)
   if (!user) {
     return res.status(404).json(err('NOT_FOUND', 'User not found'))
   }
@@ -107,12 +116,8 @@ export async function updateProfile(req: Request, res: Response) {
   if (parsed.data.avatar !== undefined) {
     setData.avatar = parsed.data.avatar || null
   }
-  const [updated] = await db
-    .update(users)
-    .set(setData)
-    .where(eq(users.id, userId))
-    .returning()
 
+  const updated = await userModel.updateById(userId, setData)
   if (!updated) {
     return res.status(404).json(err('NOT_FOUND', 'User not found'))
   }
@@ -128,8 +133,8 @@ export async function changePassword(req: Request, res: Response) {
   }
 
   const sessionUser = req.user as { id: string; authProvider?: string }
+  const user = await userModel.findById(sessionUser.id)
 
-  const [user] = await db.select().from(users).where(eq(users.id, sessionUser.id)).limit(1)
   if (!user?.passwordHash) {
     return res.status(403).json(err('FORBIDDEN', 'No se puede cambiar la contraseña de esta cuenta'))
   }
@@ -140,7 +145,7 @@ export async function changePassword(req: Request, res: Response) {
   }
 
   const passwordHash = await bcrypt.hash(parsed.data.newPassword, 10)
-  await db.update(users).set({ passwordHash }).where(eq(users.id, user.id))
+  await userModel.updateById(user.id, { passwordHash })
 
   res.json({ ok: true })
 }
@@ -153,18 +158,13 @@ export async function register(req: Request, res: Response) {
 
   const { email, password, name } = parsed.data
 
-  const [existing] = await db.select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1)
-  if (existing) {
+  const exists = await userModel.existsByEmail(email)
+  if (exists) {
     return res.status(409).json(err('CONFLICT', 'Email already in use'))
   }
 
   const passwordHash = await bcrypt.hash(password, 10)
-  const [newUser] = await db
-    .insert(users)
-    .values({ email, name, passwordHash, authProvider: 'local' })
-    .returning()
-
-  if (!newUser) throw new Error('Insert returned no user')
+  const newUser = await userModel.createUser({ email, name, passwordHash, authProvider: 'local' })
 
   const token = signToken(userToPayload(newUser))
   res.status(201).json({ user: userToPublic(newUser), token })
@@ -187,6 +187,63 @@ export function localLogin(req: Request, res: Response, next: NextFunction) {
 
 export async function deleteAccount(req: Request, res: Response) {
   const userId = (req.user as { id: string }).id
-  await db.delete(users).where(eq(users.id, userId))
+  await userModel.deleteById(userId)
+  res.json({ ok: true })
+}
+
+/**
+ * POST /api/auth/forgot-password
+ * Sends a password-reset email. Works for both local and Google accounts.
+ * Always responds 200 to avoid email enumeration.
+ */
+export async function forgotPassword(req: Request, res: Response) {
+  const parsed = forgotPasswordSchema.safeParse(req.body)
+  if (!parsed.success) {
+    return res.status(400).json(err('VALIDATION_ERROR', 'Ingresá un email válido'))
+  }
+
+  const user = await userModel.findByEmail(parsed.data.email)
+
+  // Always respond 200 — don't reveal whether the email exists
+  if (!user) {
+    return res.json({ ok: true })
+  }
+
+  await passwordResetModel.invalidatePreviousTokens(user.id)
+  const resetToken = await passwordResetModel.createResetToken(user.id)
+
+  const resetUrl = `${env.FRONTEND_URL}/reset-password?token=${resetToken.token}`
+  const isFirstTime = user.authProvider === 'google' && !user.passwordHash
+
+  try {
+    await sendPasswordResetEmail(user.email, resetUrl, isFirstTime)
+  } catch (emailErr) {
+    console.error('[auth] Failed to send password reset email:', emailErr)
+    // Don't surface the error to the client
+  }
+
+  res.json({ ok: true })
+}
+
+/**
+ * POST /api/auth/reset-password
+ * Atomically consumes the token and sets a new password.
+ * Uses consumeToken() to eliminate the TOCTOU race between validation and marking used.
+ */
+export async function resetPassword(req: Request, res: Response) {
+  const parsed = resetPasswordSchema.safeParse(req.body)
+  if (!parsed.success) {
+    return res.status(400).json(err('VALIDATION_ERROR', parsed.error.issues[0]?.message ?? 'Invalid input'))
+  }
+
+  // Atomically consume the token — returns null if already used, expired, or not found
+  const consumed = await passwordResetModel.consumeToken(parsed.data.token)
+  if (!consumed) {
+    return res.status(404).json(err('NOT_FOUND', 'Este link ya venció o fue usado. Pedí uno nuevo.'))
+  }
+
+  const passwordHash = await bcrypt.hash(parsed.data.password, 10)
+  await userModel.updateById(consumed.userId, { passwordHash })
+
   res.json({ ok: true })
 }

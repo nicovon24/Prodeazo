@@ -25,13 +25,13 @@ function TeamsRow({ match }: { match: DashboardPanelMatch }) {
   return (
     <div className={styles.matchTeamsRow}>
       <div className={`${styles.team} ${styles.teamRight}`}>
+        <span className={styles.teamName}>{teamLabel(match.homeTeam)}</span>
         <TeamLogo team={match.homeTeam} />
-        {teamLabel(match.homeTeam)}
       </div>
       <span className={styles.vs}>VS</span>
       <div className={`${styles.team} ${styles.teamLeft}`}>
-        {teamLabel(match.awayTeam)}
         <TeamLogo team={match.awayTeam} />
+        <span className={styles.teamName}>{teamLabel(match.awayTeam)}</span>
       </div>
     </div>
   )
@@ -67,13 +67,13 @@ export function PendingMatchRow({ match }: { match: DashboardPanelMatch }) {
       </span>
       <div className={styles.predTeams}>
         <div className={`${styles.predTeam} ${styles.teamRight}`}>
+          <span className={styles.teamName}>{teamLabel(match.homeTeam)}</span>
           <TeamLogo team={match.homeTeam} />
-          {teamLabel(match.homeTeam)}
         </div>
         <span className={styles.vs}>VS</span>
         <div className={`${styles.predTeam} ${styles.teamLeft}`}>
-          {teamLabel(match.awayTeam)}
           <TeamLogo team={match.awayTeam} />
+          <span className={styles.teamName}>{teamLabel(match.awayTeam)}</span>
         </div>
       </div>
     </div>

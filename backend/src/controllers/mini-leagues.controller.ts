@@ -133,13 +133,20 @@ export async function getInviteInfo(req: Request, res: Response) {
 }
 
 export async function joinByToken(req: Request, res: Response) {
-  const userId = (req.user as any).id
+  const userId = (req.user as { id: string }).id
   const token = String(req.body?.token ?? '')
 
   if (!token) return res.status(400).json(err('VALIDATION_ERROR', 'token is required'))
 
   const [league] = await miniLeagueModel.findLeagueByToken(token)
-  if (!league) return res.status(404).json(err('NOT_FOUND', 'Invite link not found or expired'))
+  if (!league) {
+    // Distinguish expired token from non-existent token
+    const [expired] = await miniLeagueModel.findLeagueByTokenIgnoreExpiry(token)
+    if (expired) {
+      return res.status(410).json(err('GONE', 'invite_link_expired'))
+    }
+    return res.status(404).json(err('NOT_FOUND', 'invite_link_not_found'))
+  }
 
   const [existing] = await miniLeagueModel.findMember(league.id, userId)
   if (existing) return res.status(409).json(err('CONFLICT', 'Already a member'))

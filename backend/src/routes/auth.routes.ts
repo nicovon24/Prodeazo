@@ -4,10 +4,9 @@ import passport, { isGoogleOAuthEnabled } from '../config/passport'
 import * as authController from '../controllers/auth.controller'
 import { asyncHandler } from '../utils/asyncHandler'
 import { requireAuth } from '../middleware/requireAuth'
+import { env } from '../env'
 
 const router = Router()
-
-const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000'
 
 const requireGoogleOAuth: RequestHandler = (_req, res, next) => {
   if (!isGoogleOAuthEnabled) {
@@ -29,7 +28,7 @@ router.get(
   '/callback',
   requireGoogleOAuth,
   passport.authenticate('google', {
-    failureRedirect: `${frontendUrl}/login`,
+    failureRedirect: `${env.FRONTEND_URL}/login`,
     failureMessage: true,
     session: false,
   }),
@@ -40,6 +39,8 @@ router.get('/exchange', asyncHandler(authController.exchangeCode))
 
 router.post('/register', asyncHandler(authController.register))
 router.post('/login', asyncHandler(authController.localLogin))
+router.post('/forgot-password', asyncHandler(authController.forgotPassword))
+router.post('/reset-password', asyncHandler(authController.resetPassword))
 router.post('/logout', requireAuth, asyncHandler(authController.logout))
 
 router.get('/me', requireAuth, asyncHandler(authController.me))
