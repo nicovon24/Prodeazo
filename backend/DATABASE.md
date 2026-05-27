@@ -18,8 +18,10 @@ users >─────────┘ (user_id)
   └─< predictions (user_id)
   │
   └─< mini_league_members (user_id)
-              │
-mini_leagues >┘ (mini_league_id)  [cascade delete]
+  │           │
+  │  mini_leagues >┘ (mini_league_id)  [cascade delete]
+  │
+  └─< password_reset_tokens (user_id)  [cascade delete]
 ```
 
 ---
@@ -126,6 +128,26 @@ Each user’s prediction per match. One prediction per `(user_id, fixture_id)` p
 
 ---
 
+### `password_reset_tokens`
+
+Single-use tokens for the forgot-password / set-first-password flow.
+
+| Column | Type | Constraints | Description |
+|---------|------|-------------|-------------|
+| `id` | text (cuid2) | PK | Internal ID. |
+| `user_id` | text | NOT NULL, FK → `users.id` ON DELETE CASCADE | Owner. |
+| `token` | text | UNIQUE, NOT NULL | CUID2 token embedded in the reset URL. |
+| `expires_at` | timestamp | NOT NULL | 1 hour from creation. |
+| `used_at` | timestamp | nullable | Set on use. Null = still valid. |
+| `created_at` | timestamp | DEFAULT NOW() | Created at. |
+
+**Rules:**
+- Valid token: `expires_at > now()` AND `used_at IS NULL`.
+- A new token invalidates all previous tokens for the same user.
+- Works for Google accounts (`auth_provider = 'google'`) with no `password_hash` — lets them set a password for the first time.
+
+---
+
 ### `mini_leagues`
 
 Private user groups with their own leaderboard.
@@ -134,9 +156,12 @@ Private user groups with their own leaderboard.
 |---------|------|-------------|-------------|
 | `id` | text (cuid2) | PK | Internal ID. |
 | `name` | text | NOT NULL | League name (max 50 chars). |
-| `invite_code` | text | UNIQUE, NOT NULL | 8-character invite code (e.g. `AB12CD34`). Auto-generated. |
+| `invite_code` | text | UNIQUE, NOT NULL | 8-character permanent invite code (e.g. `AB12CD34`). Auto-generated. |
+| `invite_token` | text | UNIQUE, nullable | CUID2 token for shareable URL. Generated on-demand. |
+| `invite_expires_at` | timestamp | nullable | Expiry of `invite_token` (7 days from generation). |
 | `creator_id` | text | NOT NULL | Creator user ID. |
 | `created_at` | timestamp | DEFAULT NOW() | Created at. |
+| `tournament_id` | text | nullable, FK → `tournaments.id` | Associated tournament. |
 
 ---
 

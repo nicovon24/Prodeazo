@@ -43,7 +43,10 @@ function LoginContent() {
   function getPostLoginRedirect(): string {
     const params = new URLSearchParams(window.location.search)
     const redirectParam = params.get('redirect')
-    if (redirectParam) return redirectParam
+    // Only allow same-origin relative paths to prevent open redirect
+    if (redirectParam && redirectParam.startsWith('/') && !redirectParam.startsWith('//')) {
+      return redirectParam
+    }
     const pendingToken = sessionStorage.getItem('pendingInviteToken')
     if (pendingToken) return `/join?token=${pendingToken}`
     return '/home'
@@ -51,16 +54,12 @@ function LoginContent() {
 
   useEffect(() => {
     if (!loading && user) {
-      const dest = getPostLoginRedirect();
-      console.log('[Login] User present, redirecting to:', dest);
-      
-      // Prevent loop if destination is the same
+      const dest = getPostLoginRedirect()
+      // Prevent loop if destination is the same as current path
       if (typeof window !== 'undefined' && window.location.pathname === dest) {
-        console.warn('[Login] Destination is same as current, skipping redirect to avoid loop');
-        return;
+        return
       }
-      
-      router.replace(dest);
+      router.replace(dest)
     }
   }, [loading, router, user])
 
@@ -139,13 +138,14 @@ function LoginContent() {
           }
         />
 
-        <div className="-mt-2 flex justify-end">
-          <button
-            type="button"
-            className="cursor-pointer text-sm font-bold text-primary transition-colors hover:text-primary/70 hover:underline"
+
+        <div className="flex justify-end -mt-1">
+          <Link
+            href="/forgot-password"
+            className="text-xs text-foreground/45 transition-colors hover:text-primary"
           >
             ¿Olvidaste tu contraseña?
-          </button>
+          </Link>
         </div>
 
         <ErrorList errors={errors} />

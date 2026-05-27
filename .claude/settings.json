@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pnpm add *)",
+      "Bash(pnpm db:push)"
+    ],
+    "additionalDirectories": [
+      "C:\\Users\\Nicolas\\.claude\\plans"
+    ]
+  }
+}

@@ -13,7 +13,7 @@ Prediction pool app for the 2026 FIFA World Cup. Users sign in with Google, subm
 ProdeazoAppNuevo/
 ├── frontend/          # Next.js 16 App Router — Vercel
 ├── backend/           # Express 5 + Drizzle — Render
-├── docker-compose.yml # Local: Postgres (5432) + backend (4000) + migrations
+├── docker-compose.yml # Local: Postgres (5433) + backend (4000) + migrations
 ├── CLAUDE.md          # ← you are here (L1 Context)
 ├── VISION.md          # Product vision, business domain
 ├── ARCHITECTURE.md    # Architecture decisions (ADRs)
@@ -70,6 +70,16 @@ Each step produces a written artifact. Deployment is continuous: every completed
 - **JWT is stored in localStorage on the frontend**, sent as `Authorization: Bearer <token>`
 - **In-memory cache invalidation lives in `CacheService`** — do not bypass in controllers
 - **One prediction per `(user_id, fixture_id)`** — enforced at DB level
+
+## Language
+
+**All project documentation must be written in English.** This applies to:
+- All `.md` files in the root, `backend/`, `frontend/`, and `docs/` directories
+- Code comments, JSDoc, and inline documentation
+- Commit messages
+- `CURRENT.md` session notes
+
+The app UI itself remains in Spanish (it targets Argentine/Spanish-speaking users).
 
 ## What to Read First Per Task
 
