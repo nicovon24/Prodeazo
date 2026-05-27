@@ -80,6 +80,15 @@ export function findLeagueByToken(token: string) {
     .limit(1)
 }
 
+/** Find a league by token ignoring expiry — used to distinguish expired vs. not-found tokens. */
+export function findLeagueByTokenIgnoreExpiry(token: string) {
+  return db
+    .select()
+    .from(miniLeagues)
+    .where(eq(miniLeagues.inviteToken, token))
+    .limit(1)
+}
+
 export function findLeagueLeaderboard(leagueId: string) {
   return db
     .select({
