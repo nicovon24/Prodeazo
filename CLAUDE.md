@@ -62,6 +62,12 @@ SPEC → PLAN → TEST → CODE → REVIEW → PR (human)
 
 Each step produces a written artifact. Deployment is continuous: every completed task on `master` is potentially shippable.
 
+## Git Workflow
+
+**Never commit or push until the user explicitly confirms they have tested the changes or the user orders to push it.**
+
+After finishing an implementation, report what changed and wait for the user's go-ahead before running any `git commit` or `git push`. This applies to all branches and all tasks, no exceptions.
+
 ## Key Invariants
 
 - **Never compute points outside `backend/src/services/scoring.ts`**
