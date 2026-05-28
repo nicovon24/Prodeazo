@@ -11,6 +11,7 @@ import {
   AlertCircle,
   CheckCircle2,
 } from "lucide-react";
+import clsx from "clsx";
 import { Header } from "../../../../components/layout/Header";
 import { useAuth } from "../../../../hooks/useAuth";
 import {
@@ -23,7 +24,6 @@ import {
   type LeagueLeaderboardEntry,
 } from "../../../../api/mini-leagues";
 import { ApiError } from "../../../../api/client";
-import styles from "./league.module.css";
 
 type ToastTone = "success" | "error";
 interface ToastState { tone: ToastTone; title: string; message: string }
@@ -110,7 +110,6 @@ export default function LeagueDetailPage() {
       await navigator.clipboard.writeText(inviteUrl);
       showToast("success", "Link copiado", "El link de invitación fue copiado al portapapeles.");
     } catch {
-      // Fallback: copy the invite code
       try {
         await navigator.clipboard.writeText(detail.inviteCode);
         showToast("success", "Código copiado", `Código: ${detail.inviteCode}`);
@@ -161,8 +160,10 @@ export default function LeagueDetailPage() {
     return (
       <>
         <Header title="Liga" subtitle="Cargando…" />
-        <main className={styles.main}>
-          <div className={styles.loadingState}>Cargando…</div>
+        <main className="flex-1 px-4 md:px-8 pt-4 md:pt-6 pb-6 md:pb-8 flex flex-col gap-6 relative">
+          <div className="flex items-center justify-center py-20 px-6 text-white/50 text-[0.95rem]">
+            Cargando…
+          </div>
         </main>
       </>
     );
@@ -172,10 +173,12 @@ export default function LeagueDetailPage() {
     return (
       <>
         <Header title="Liga no encontrada" subtitle="" />
-        <main className={styles.main}>
-          <div className={styles.notFound}>
-            <p className={styles.notFoundTitle}>Liga no encontrada.</p>
-            <Link href="/leagues" className={styles.notFoundLink}>Volver a ligas</Link>
+        <main className="flex-1 px-4 md:px-8 pt-4 md:pt-6 pb-6 md:pb-8 flex flex-col gap-6 relative">
+          <div className="flex flex-col items-center gap-4 py-20 px-6 text-center">
+            <p className="text-[1.2rem] font-bold text-white/70">Liga no encontrada.</p>
+            <Link href="/leagues" className="text-[0.9rem] text-primary no-underline font-semibold">
+              Volver a ligas
+            </Link>
           </div>
         </main>
       </>
@@ -188,33 +191,38 @@ export default function LeagueDetailPage() {
         title={detail.name}
         subtitle="Clasificación y detalles de la liga."
       />
-      <main className={styles.main}>
+      <main className="flex-1 px-4 md:px-8 pt-4 md:pt-6 pb-6 md:pb-8 flex flex-col gap-6 relative">
         {/* Header card */}
-        <div className={styles.leagueHeader}>
-          <div className={styles.leagueTitleGroup}>
-            <h1 className={styles.leagueName}>{detail.name}</h1>
-            <div className={styles.inviteRow}>
-              <span className={styles.inviteLabel}>Código:</span>
+        <div className="bg-white/[0.03] border border-white/[0.08] rounded-2xl px-5 md:px-8 py-5 md:py-7 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 flex-wrap">
+          <div className="flex flex-col gap-2">
+            <h1 className="font-display text-[1.6rem] font-extrabold text-white leading-[1.1]">
+              {detail.name}
+            </h1>
+            <div className="flex items-center gap-2.5">
+              <span className="text-[0.7rem] font-bold uppercase text-white/40 tracking-[0.05em]">Código:</span>
               <button
-                className={styles.inviteChip}
+                className="inline-flex items-center gap-2 bg-white/[0.06] border border-white/[0.12] rounded-lg px-3 py-1.5 font-mono text-[0.9rem] font-bold text-primary cursor-pointer transition-colors duration-200 hover:bg-primary/[0.08]"
                 onClick={handleCopyCode}
                 title="Copiar código"
               >
                 {detail.inviteCode}
-                <Copy className={styles.inviteChipIcon} />
+                <Copy className="w-3.5 h-3.5 text-white/50" />
               </button>
             </div>
           </div>
 
-          <div className={styles.actionsSection}>
+          <div className="flex gap-3 flex-wrap">
             {isOwner ? (
               <>
-                <button className={styles.btnPrimary} onClick={handleCopyInvite}>
+                <button
+                  className="px-5 py-2.5 bg-primary border-none rounded-lg text-black text-[0.9rem] font-bold cursor-pointer transition-opacity duration-200 flex items-center gap-2 hover:opacity-90"
+                  onClick={handleCopyInvite}
+                >
                   <LinkIcon className="w-4 h-4" />
                   Copiar link de invitación
                 </button>
                 <button
-                  className={styles.btnDanger}
+                  className="px-5 py-2.5 bg-transparent border border-[rgba(213,2,4,0.4)] rounded-lg text-[#ff6b6b] text-[0.9rem] font-semibold cursor-pointer transition-colors duration-200 flex items-center gap-2 hover:bg-[rgba(213,2,4,0.08)]"
                   onClick={() => setShowConfirmDelete(true)}
                 >
                   <Trash2 className="w-4 h-4" />
@@ -223,7 +231,7 @@ export default function LeagueDetailPage() {
               </>
             ) : (
               <button
-                className={styles.btnSecondary}
+                className="px-5 py-2.5 bg-transparent border border-white/[0.15] rounded-lg text-white/70 text-[0.9rem] font-semibold cursor-pointer transition-colors duration-200 flex items-center gap-2 hover:bg-white/[0.08]"
                 onClick={handleLeave}
                 disabled={actionLoading}
               >
@@ -235,12 +243,14 @@ export default function LeagueDetailPage() {
         </div>
 
         {/* Ranking table */}
-        <div className={styles.rankingSection}>
-          <div className={styles.rankingHeader}>
-            <h2 className={styles.rankingTitle}>Clasificación</h2>
+        <div className="bg-white/[0.02] border border-white/[0.05] rounded-xl overflow-hidden">
+          <div className="px-4 md:px-6 py-5 border-b border-white/[0.05]">
+            <h2 className="text-[1.05rem] font-bold text-white">Clasificación</h2>
           </div>
 
-          <div className={styles.tableHead}>
+          <div className="overflow-x-auto">
+          <div className="min-w-[360px]">
+          <div className="grid [grid-template-columns:64px_1fr_120px] px-4 md:px-6 py-2.5 text-[0.65rem] font-bold text-white/35 uppercase tracking-[0.05em] border-b border-white/[0.04]">
             <div>POS</div>
             <div>PARTICIPANTE</div>
             <div style={{ textAlign: 'right' }}>PUNTOS</div>
@@ -248,36 +258,45 @@ export default function LeagueDetailPage() {
 
           {leaderboard.map((entry) => {
             const rank = entry.rank;
-            const posClass =
-              rank === 1 ? styles.colRank1 :
-              rank === 2 ? styles.colRank2 :
-              rank === 3 ? styles.colRank3 : '';
+            const posColor =
+              rank === 1 ? 'text-[#FFCC00]' :
+              rank === 2 ? 'text-[#C0C0C0]' :
+              rank === 3 ? 'text-[#CD7F32]' : 'text-white/80';
             const isCurrentUser = entry.id === user?.id;
             const memberRole = detail.members.find((m) => m.id === entry.id)?.role;
 
             return (
               <div
                 key={entry.id}
-                className={`${styles.tableRow} ${isCurrentUser ? styles.rowHighlight : ''}`}
+                className={clsx(
+                  "grid [grid-template-columns:64px_1fr_120px] px-4 md:px-6 py-3.5 items-center border-b border-white/[0.02] last:border-b-0 transition-colors duration-[150ms] hover:bg-white/[0.03]",
+                  isCurrentUser ? "bg-primary/[0.05] hover:bg-primary/[0.08]" : ""
+                )}
               >
-                <div className={`${styles.colRank} ${posClass}`}>{rank}</div>
-                <div className={styles.colMember}>
-                  <div className={styles.avatar}>
+                <div className={clsx("font-display text-[1.2rem] font-extrabold", posColor)}>
+                  {rank}
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white/50 text-[0.75rem] font-semibold overflow-hidden shrink-0">
                     {entry.avatar ? (
-                      <img src={entry.avatar} alt={entry.name} />
+                      <img src={entry.avatar} alt={entry.name} className="w-full h-full object-cover" />
                     ) : (
                       getInitials(entry.name)
                     )}
                   </div>
-                  <span className={styles.memberName}>{entry.name}</span>
+                  <span className="text-[0.95rem] font-semibold text-white">{entry.name}</span>
                   {memberRole === 'owner' && (
-                    <span className={styles.ownerBadge}>Owner</span>
+                    <span className="text-[0.6rem] font-bold bg-[rgba(255,204,0,0.15)] text-[#FFCC00] border border-[rgba(255,204,0,0.3)] px-[7px] py-[2px] rounded uppercase tracking-[0.04em]">
+                      Owner
+                    </span>
                   )}
                   {isCurrentUser && (
-                    <span className={styles.youBadge}>TÚ</span>
+                    <span className="text-[0.6rem] font-bold bg-primary text-black px-[7px] py-[2px] rounded uppercase tracking-[0.04em]">
+                      TÚ
+                    </span>
                   )}
                 </div>
-                <div className={styles.colPoints}>
+                <div className="font-display text-[1.1rem] font-bold text-white text-right">
                   {entry.totalPoints.toLocaleString('es-AR')}
                 </div>
               </div>
@@ -285,33 +304,35 @@ export default function LeagueDetailPage() {
           })}
 
           {leaderboard.length === 0 && (
-            <div style={{ padding: '32px 24px', color: 'rgba(255,255,255,0.4)', textAlign: 'center', fontSize: '0.9rem' }}>
+            <div className="px-6 py-8 text-white/40 text-center text-[0.9rem]">
               Sin datos de clasificación todavía.
             </div>
           )}
+          </div>
+          </div>
         </div>
 
         {/* Confirm delete dialog */}
         {showConfirmDelete && (
           <div
-            className={styles.confirmOverlay}
+            className="fixed inset-0 bg-black/70 flex items-center justify-center z-[200] p-6"
             onClick={(e) => { if (e.target === e.currentTarget) setShowConfirmDelete(false); }}
           >
-            <div className={styles.confirmCard}>
-              <h2 className={styles.confirmTitle}>Eliminar liga</h2>
-              <p className={styles.confirmText}>
+            <div className="bg-[#111217] border border-[rgba(213,2,4,0.3)] rounded-2xl p-8 w-full max-w-[400px] flex flex-col gap-4">
+              <h2 className="text-[1.1rem] font-extrabold text-white">Eliminar liga</h2>
+              <p className="text-[0.9rem] text-white/60 leading-[1.5]">
                 ¿Estás seguro que querés eliminar <strong>{detail.name}</strong>? Esta acción no se puede deshacer.
               </p>
-              <div className={styles.confirmActions}>
+              <div className="flex gap-3 justify-end mt-2">
                 <button
-                  className={styles.btnSecondary}
+                  className="px-5 py-2.5 bg-transparent border border-white/[0.15] rounded-lg text-white/70 text-[0.9rem] font-semibold cursor-pointer transition-colors duration-200 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed hover:not-disabled:bg-white/[0.08]"
                   onClick={() => setShowConfirmDelete(false)}
                   disabled={actionLoading}
                 >
                   Cancelar
                 </button>
                 <button
-                  className={styles.btnDanger}
+                  className="px-5 py-2.5 bg-transparent border border-[rgba(213,2,4,0.4)] rounded-lg text-[#ff6b6b] text-[0.9rem] font-semibold cursor-pointer transition-colors duration-200 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed hover:not-disabled:bg-[rgba(213,2,4,0.08)]"
                   onClick={handleDelete}
                   disabled={actionLoading}
                 >
@@ -325,18 +346,23 @@ export default function LeagueDetailPage() {
         {/* Toast */}
         {toast && (
           <div
-            className={`${styles.toast} ${toast.tone === 'success' ? styles.toastSuccess : styles.toastError}`}
+            className={clsx(
+              "fixed top-7 right-7 z-[300] flex items-start gap-3.5 w-[min(420px,calc(100vw-56px))] p-4 rounded-[10px] shadow-[0_22px_60px_rgba(0,0,0,0.55),0_0_0_1px_rgba(255,255,255,0.04)_inset] overflow-hidden relative",
+              toast.tone === 'success'
+                ? "bg-[#111a12] border border-[rgba(0,206,23,0.32)] text-[#f1fff5] toast-bar-success"
+                : "bg-[#1e1112] border border-[rgba(213,2,4,0.36)] text-[#fff0f0] toast-bar-error"
+            )}
           >
-            <span className={styles.toastIconWrap}>
+            <span className="shrink-0 mt-0.5">
               {toast.tone === 'success' ? (
-                <CheckCircle2 className={styles.toastIcon} />
+                <CheckCircle2 className="w-5 h-5" />
               ) : (
-                <AlertCircle className={styles.toastIcon} />
+                <AlertCircle className="w-5 h-5" />
               )}
             </span>
-            <span className={styles.toastContent}>
-              <span className={styles.toastTitle}>{toast.title}</span>
-              <span className={styles.toastMessage}>{toast.message}</span>
+            <span className="flex flex-col gap-1">
+              <span className="text-[0.9rem] font-bold">{toast.title}</span>
+              <span className="text-[0.8rem] opacity-85">{toast.message}</span>
             </span>
           </div>
         )}

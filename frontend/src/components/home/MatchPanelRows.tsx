@@ -1,7 +1,8 @@
+"use client"
 import { format, isToday, isTomorrow } from 'date-fns'
 import { es } from 'date-fns/locale'
 import type { DashboardPanelMatch, DashboardPanelTeam, DashboardRecentResult } from '@/api/dashboard'
-import styles from '@/app/(main)/home/home.module.css'
+import { getCountryName } from '@/lib/i18n/countries'
 
 function formatKickoff(iso: string) {
   const d = new Date(iso)
@@ -11,27 +12,32 @@ function formatKickoff(iso: string) {
 }
 
 function teamLabel(team: DashboardPanelTeam | null) {
-  return team?.shortName?.trim() || team?.name || '—'
+  if (!team) return '—'
+  return getCountryName(team.name)
 }
 
 function TeamLogo({ team }: { team: DashboardPanelTeam | null }) {
   if (!team?.logoUrl) {
-    return <span className={styles.teamLogoFallback}>{teamLabel(team).slice(0, 2).toUpperCase()}</span>
+    return (
+      <span className="w-6 h-6 rounded-[3px] bg-white/[0.08] flex items-center justify-center text-[0.6rem] font-bold text-white/50 flex-shrink-0">
+        {teamLabel(team).slice(0, 2).toUpperCase()}
+      </span>
+    )
   }
-  return <img src={team.logoUrl} alt={team.name} className={styles.teamLogo} />
+  return <img src={team.logoUrl} alt={team.name} className="w-6 h-6 object-contain rounded-[3px] flex-shrink-0" />
 }
 
 function TeamsRow({ match }: { match: DashboardPanelMatch }) {
   return (
-    <div className={styles.matchTeamsRow}>
-      <div className={`${styles.team} ${styles.teamRight}`}>
-        <span className={styles.teamName}>{teamLabel(match.homeTeam)}</span>
+    <div className="flex items-center gap-1.5 w-full min-w-0">
+      <div className="flex-1 flex items-center justify-end gap-1.5 min-w-0 text-[0.8rem] font-semibold text-white">
+        <span className="overflow-hidden text-ellipsis whitespace-nowrap min-w-0">{teamLabel(match.homeTeam)}</span>
         <TeamLogo team={match.homeTeam} />
       </div>
-      <span className={styles.vs}>VS</span>
-      <div className={`${styles.team} ${styles.teamLeft}`}>
+      <span className="text-[0.68rem] font-bold text-white/30 flex-shrink-0">VS</span>
+      <div className="flex-1 flex items-center justify-start gap-1.5 min-w-0 text-[0.8rem] font-semibold text-white">
         <TeamLogo team={match.awayTeam} />
-        <span className={styles.teamName}>{teamLabel(match.awayTeam)}</span>
+        <span className="overflow-hidden text-ellipsis whitespace-nowrap min-w-0">{teamLabel(match.awayTeam)}</span>
       </div>
     </div>
   )
@@ -42,15 +48,17 @@ export function UpcomingMatchRow({ match }: { match: DashboardPanelMatch }) {
   const isLive = match.status === 'in_progress' || match.status === 'inprogress'
 
   return (
-    <div className={styles.matchCardStatic}>
-      <div className={styles.matchTime}>
-        <span className={styles.matchTimeLabel}>{kickoff.label}</span>
-        <span className={styles.matchTimeValue}>{kickoff.time}</span>
-        <span className={isLive ? styles.matchLive : styles.matchKickoff}>
-          {isLive ? 'En vivo' : 'Para el kickoff'}
-        </span>
+    <div className="flex items-center gap-2.5 p-2 px-2.5 bg-white/[0.02] rounded-lg border border-white/[0.05]">
+      <div className="flex flex-col gap-0.5 flex-shrink-0">
+        <span className="text-[0.67rem] font-bold text-white/50 uppercase">{kickoff.label}</span>
+        <span className="text-[0.85rem] font-bold text-white">{kickoff.time}</span>
+        {isLive ? (
+          <span className="text-[0.62rem] font-bold text-primary uppercase">En vivo</span>
+        ) : (
+          <span className="text-[0.62rem] font-semibold text-white/40">Kickoff</span>
+        )}
       </div>
-      <div className={styles.matchTeams}>
+      <div className="flex-1 min-w-0">
         <TeamsRow match={match} />
       </div>
     </div>
@@ -61,29 +69,19 @@ export function PendingMatchRow({ match }: { match: DashboardPanelMatch }) {
   const kickoff = formatKickoff(match.date)
 
   return (
-    <div className={styles.predCard}>
-      <span className={styles.predTime}>
-        {kickoff.label} - {kickoff.time}
+    <div className="flex flex-col gap-0.5 p-1.5 px-2 bg-white/[0.02] rounded-lg border border-white/[0.05]">
+      <span className="text-[0.62rem] font-semibold text-white/45 uppercase">
+        {kickoff.label} · {kickoff.time}
       </span>
-      <div className={styles.predTeams}>
-        <div className={`${styles.predTeam} ${styles.teamRight}`}>
-          <span className={styles.teamName}>{teamLabel(match.homeTeam)}</span>
-          <TeamLogo team={match.homeTeam} />
-        </div>
-        <span className={styles.vs}>VS</span>
-        <div className={`${styles.predTeam} ${styles.teamLeft}`}>
-          <TeamLogo team={match.awayTeam} />
-          <span className={styles.teamName}>{teamLabel(match.awayTeam)}</span>
-        </div>
-      </div>
+      <TeamsRow match={match} />
     </div>
   )
 }
 
 const toneClass: Record<DashboardRecentResult['prediction']['resultTone'], string> = {
-  exact: styles.resultToneExact,
-  partial: styles.resultTonePartial,
-  miss: styles.resultToneMiss,
+  exact: 'border-l-[#00CE17] bg-[rgba(0,206,23,0.04)]',
+  partial: 'border-l-[#FFCC00] bg-[rgba(255,204,0,0.04)]',
+  miss: 'border-l-[#D50204] bg-[rgba(213,2,4,0.04)]',
 }
 
 export function RecentResultRow({ match }: { match: DashboardRecentResult }) {
@@ -91,22 +89,18 @@ export function RecentResultRow({ match }: { match: DashboardRecentResult }) {
   const tone = match.prediction.resultTone
 
   return (
-    <div className={`${styles.resultCard} ${toneClass[tone]}`}>
-      <div className={styles.matchTime}>
-        <span className={styles.matchTimeLabel}>{kickoff.label}</span>
-        <span className={styles.matchTimeValue}>{kickoff.time}</span>
+    <div className={`flex items-start gap-2 p-1.5 px-2 bg-white/[0.02] rounded-lg border border-white/[0.05] border-l-[3px] ${toneClass[tone]}`}>
+      <div className="flex flex-col gap-0.5 flex-shrink-0">
+        <span className="text-[0.67rem] font-bold text-white/50 uppercase">{kickoff.label}</span>
+        <span className="text-[0.8rem] font-bold text-white">{kickoff.time}</span>
       </div>
-      <div className={styles.matchTeams}>
+      <div className="flex-1 min-w-0 flex flex-col gap-0.5">
         <TeamsRow match={match} />
-        <div className={styles.resultScores}>
-          <span className={styles.resultScoreLabel}>Resultado</span>
-          <span className={styles.resultScoreValue}>
-            {match.homeScore ?? 0} - {match.awayScore ?? 0}
-          </span>
-          <span className={styles.resultScoreLabel}>Tu predicción</span>
-          <span className={styles.resultScoreValue}>
-            {match.prediction.homeGoals} - {match.prediction.awayGoals}
-          </span>
+        <div className="grid grid-cols-2 gap-x-2 mt-0.5 items-center">
+          <span className="text-[0.6rem] font-semibold text-white/40 uppercase whitespace-nowrap">Resultado</span>
+          <span className="text-[0.78rem] font-bold text-white">{match.homeScore ?? 0} - {match.awayScore ?? 0}</span>
+          <span className="text-[0.6rem] font-semibold text-white/40 uppercase whitespace-nowrap">Tu predicción</span>
+          <span className="text-[0.78rem] font-bold text-white">{match.prediction.homeGoals} - {match.prediction.awayGoals}</span>
         </div>
       </div>
     </div>
