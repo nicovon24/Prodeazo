@@ -118,6 +118,7 @@ export default function FixturePage() {
   const [statusOpen, setStatusOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showBackTop, setShowBackTop] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const [countdown, setCountdown] = useState(getWorldCupCountdown);
   const tournamentRef = useRef<HTMLDivElement>(null);
   const roundRef = useRef<HTMLDivElement>(null);
@@ -140,9 +141,18 @@ export default function FixturePage() {
       setShowBackTop(window.scrollY > 260);
     }
 
+    function handleResize() {
+      setIsMobile(window.innerWidth < 768);
+    }
+
     handleScroll();
+    handleResize();
     window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
+    window.addEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('resize', handleResize);
+    };
   }, []);
 
   useEffect(() => {
@@ -503,7 +513,7 @@ export default function FixturePage() {
           <input
             value={searchQuery}
             onChange={event => setSearchQuery(event.target.value)}
-            placeholder='Buscar partidos, equipos, fases... (Por ejemplo "Argentina", "Semifinales")'
+            placeholder={isMobile ? 'Buscar partidos, equipos...' : 'Buscar partidos, equipos, fases... (Por ejemplo "Argentina", "Semifinales")'}
             className="min-w-0 flex-1 bg-transparent text-[0.9rem] font-semibold text-white outline-none placeholder:text-white/35"
             type="search"
           />
