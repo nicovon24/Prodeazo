@@ -3,20 +3,17 @@
 import { useEffect, useMemo, useState, useRef } from 'react';
 import {
   Trophy,
-  Target,
-  TrendingUp,
-  Star,
-  Users,
   Calendar,
   ChevronDown,
   ChevronRight,
   ChevronLeft,
   ArrowUpDown,
+  Search,
+  ArrowUp,
 } from 'lucide-react';
 import { Header } from '../../../components/layout/Header';
 import { fetchFixtures, type Fixture } from '../../../api/fixtures';
 import { fetchPredictions, type Prediction } from '../../../api/predictions';
-import { fetchDashboardMe } from '../../../api/dashboard';
 import { useTournamentStore } from '../../../store/useTournamentStore';
 import { TeamLogo } from '@/components/TeamLogo';
 import { getTournamentIconUrl } from '@/lib/tournament-icons';
@@ -25,11 +22,12 @@ import {
   formatPredictionScore,
   getPredictionBadgeTone,
   sortFixtures,
+  sortRoundsPhases,
+  formatRoundName,
   type FixtureSortMode,
 } from '@/lib/fixture-utils';
 import { FixtureRowSkeleton } from '@/components/skeletons/FixtureRowSkeleton';
-import { Skeleton } from '@/components/ui/Skeleton';
-import { motion } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { staggerContainer, fadeInUp } from '@/lib/animations';
 import { getCountryName } from '@/lib/i18n/countries';
 
@@ -37,12 +35,21 @@ type StatusFilter = 'all' | 'not_started' | 'in_progress' | 'finished' | 'postpo
 
 const STATUS_LABELS: Record<StatusFilter, string> = {
   all: 'Todos',
-  not_started: 'Por jugar',
   in_progress: 'En vivo',
+  not_started: 'Por jugar',
   finished: 'Finalizados',
   postponed: 'Postergados',
   cancelled: 'Cancelados',
 };
+
+const STATUS_OPTIONS: StatusFilter[] = [
+  'all',
+  'in_progress',
+  'not_started',
+  'finished',
+  'postponed',
+  'cancelled',
+];
 
 const SORT_LABELS: Record<FixtureSortMode, string> = {
   recommended: 'Recomendado',
@@ -59,9 +66,41 @@ const PRED_BADGE_CLASS: Record<ReturnType<typeof getPredictionBadgeTone>, string
 };
 
 const ROUNDS_PER_PAGE = 5;
+const WORLD_CUP_START = new Date('2026-06-11T00:00:00-03:00').getTime();
+const DROPDOWN_MOTION = {
+  initial: { opacity: 0, y: -4, scale: 0.98 },
+  animate: { opacity: 1, y: 0, scale: 1 },
+  exit: { opacity: 0, y: -4, scale: 0.98 },
+  transition: { duration: 0.16, ease: 'easeOut' },
+} as const;
 
-function formatCount(n: number): string {
-  return n.toLocaleString('es-AR');
+function capitalizeFirst(value: string): string {
+  if (!value) return value;
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+function getWorldCupCountdown() {
+  const diff = Math.max(0, WORLD_CUP_START - Date.now());
+  const totalSeconds = Math.floor(diff / 1000);
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  return { days, hours, minutes, seconds, started: diff === 0 };
+}
+
+function getTournamentDisplayName(name?: string | null): string {
+  if (!name) return 'Torneo';
+  if (/^(wc|fifa wc)\s*2026$/i.test(name.trim())) return 'World Cup 2026';
+  return name;
+}
+
+function normalizeSearch(value: string): string {
+  return value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim();
 }
 
 export default function FixturePage() {
@@ -76,37 +115,56 @@ export default function FixturePage() {
   const [tournamentOpen, setTournamentOpen] = useState(false);
   const [roundOpen, setRoundOpen] = useState(false);
   const [sortOpen, setSortOpen] = useState(false);
-  const [stats, setStats] = useState<Awaited<ReturnType<typeof fetchDashboardMe>> | null>(null);
+  const [statusOpen, setStatusOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showBackTop, setShowBackTop] = useState(false);
+  const [countdown, setCountdown] = useState(getWorldCupCountdown);
   const tournamentRef = useRef<HTMLDivElement>(null);
   const roundRef = useRef<HTMLDivElement>(null);
   const sortRef = useRef<HTMLDivElement>(null);
+  const statusRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (tournamentRef.current && !tournamentRef.current.contains(e.target as Node)) setTournamentOpen(false);
       if (roundRef.current && !roundRef.current.contains(e.target as Node)) setRoundOpen(false);
       if (sortRef.current && !sortRef.current.contains(e.target as Node)) setSortOpen(false);
+      if (statusRef.current && !statusRef.current.contains(e.target as Node)) setStatusOpen(false);
     }
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   useEffect(() => {
+    function handleScroll() {
+      setShowBackTop(window.scrollY > 260);
+    }
+
+    handleScroll();
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  useEffect(() => {
+    const interval = window.setInterval(() => setCountdown(getWorldCupCountdown()), 1000);
+    return () => window.clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
     if (!activeTournamentId) return;
     setSelectedRound(null);
     setStatusFilter('all');
+    setSearchQuery('');
     setRoundPage(0);
     setLoading(true);
 
     Promise.all([
       fetchFixtures(activeTournamentId),
       fetchPredictions(activeTournamentId),
-      fetchDashboardMe(activeTournamentId),
     ])
-      .then(([fixtureData, predData, dashboard]) => {
+      .then(([fixtureData, predData]) => {
         setFixtures(Array.isArray(fixtureData) ? fixtureData : []);
         setPredictions(Array.isArray(predData) ? predData : []);
-        setStats(dashboard);
       })
       .catch(console.error)
       .finally(() => setLoading(false));
@@ -121,12 +179,7 @@ export default function FixturePage() {
     return map;
   }, [predictions]);
 
-  const topPercent =
-    stats && stats.participantCount > 0
-      ? Math.min(100, Math.max(1, Math.round((stats.globalRank / stats.participantCount) * 100)))
-      : null;
-
-  const rounds = Array.from(new Set(fixtures.map(f => f.round).filter(Boolean))) as string[];
+  const rounds = sortRoundsPhases(Array.from(new Set(fixtures.map(f => f.round).filter(Boolean))) as string[]);
   const totalRoundPages = Math.ceil(rounds.length / ROUNDS_PER_PAGE);
   const visibleRounds = rounds.slice(roundPage * ROUNDS_PER_PAGE, (roundPage + 1) * ROUNDS_PER_PAGE);
 
@@ -174,7 +227,7 @@ export default function FixturePage() {
     );
   };
 
-  const filtered = fixtures.filter(f => {
+  const filteredBySelects = fixtures.filter(f => {
     if (selectedRound && f.round !== selectedRound) return false;
     if (statusFilter === 'all') return true;
     if (statusFilter === 'in_progress') {
@@ -189,6 +242,47 @@ export default function FixturePage() {
     return f.status === statusFilter;
   });
 
+  const normalizedSearchQuery = normalizeSearch(searchQuery);
+  const filtered = filteredBySelects.filter(f => {
+    if (!normalizedSearchQuery) return true;
+
+    const dateLabel = f.date
+      ? capitalizeFirst(new Date(f.date.slice(0, 10)).toLocaleDateString('es-AR', {
+          weekday: 'long',
+          day: 'numeric',
+          month: 'long',
+        }))
+      : '';
+    const timeLabel = f.date
+      ? new Date(f.date).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false })
+      : '';
+    const statusLabel =
+      f.status === 'in_progress' || f.status === 'inprogress'
+        ? STATUS_LABELS.in_progress
+        : f.status === 'not_started' || f.status === 'ns'
+          ? STATUS_LABELS.not_started
+          : f.status === 'finished' || f.status === 'ft'
+            ? STATUS_LABELS.finished
+            : STATUS_LABELS[f.status as StatusFilter] ?? f.status;
+
+    const searchable = [
+      getCountryName(f.homeTeam?.name),
+      getCountryName(f.awayTeam?.name),
+      f.homeTeam?.name,
+      f.awayTeam?.name,
+      formatFixturePhase(f),
+      f.groupLabel,
+      f.round,
+      statusLabel,
+      dateLabel,
+      timeLabel,
+    ]
+      .filter(Boolean)
+      .join(' ');
+
+    return normalizeSearch(searchable).includes(normalizedSearchQuery);
+  });
+
   const sorted = sortFixtures(filtered, sortMode);
 
   const grouped = sorted.reduce<Record<string, Fixture[]>>((acc, f) => {
@@ -198,58 +292,97 @@ export default function FixturePage() {
     return acc;
   }, {});
 
+  for (const key of Object.keys(grouped)) {
+    grouped[key].sort((a, b) => {
+      if (!a.date) return -1;
+      if (!b.date) return 1;
+      return a.date < b.date ? -1 : a.date > b.date ? 1 : 0;
+    });
+  }
+
   const formatDateLabel = (dateStr: string) => {
     if (dateStr === 'Sin fecha') return dateStr;
     try {
-      return new Date(dateStr).toLocaleDateString('es-AR', {
+      return capitalizeFirst(new Date(dateStr).toLocaleDateString('es-AR', {
         weekday: 'long', day: 'numeric', month: 'long',
-      });
+      }));
     } catch {
       return dateStr;
     }
   };
 
+  function scrollToTop() {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
   return (
     <>
       <Header
         title="Fixture"
-        subtitle="Todos los partidos del torneo."
+        subtitle="Todos los partidos de tus torneos favoritos."
       />
       <main className="flex-1 px-4 md:px-8 pt-4 md:pt-6 pb-4 md:pb-6 flex flex-col gap-4">
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-          {([ { icon: Trophy, label: 'Puntos Totales' }, { icon: Target, label: 'Acertados' }, { icon: TrendingUp, label: 'Precisión' }, { icon: Star, label: 'Mejor Racha' }, { icon: Users, label: 'Ligas' } ] as const).map(({ icon: Icon, label }) => {
-            const value = label === 'Puntos Totales' ? formatCount(stats?.totalPoints ?? 0) : label === 'Acertados' ? formatCount(stats?.correctPredictions ?? 0) : label === 'Precisión' ? `${stats?.precision ?? 0}%` : label === 'Mejor Racha' ? formatCount(stats?.bestStreak ?? 0) : formatCount(stats?.leagueCount ?? 0);
-            const sub = label === 'Mejor Racha' ? 'aciertos' : label === 'Ligas' ? 'activas' : label === 'Puntos Totales' && topPercent != null ? `Top ${topPercent}%` : null;
-            const subGreen = label === 'Puntos Totales' && topPercent != null;
-            return (
-              <div key={label} className="bg-white/[0.03] border border-white/[0.08] rounded-xl p-4 flex items-center gap-3">
-                <Icon className="w-5 h-5 text-primary flex-shrink-0" {...(label === 'Mejor Racha' ? { fill: 'currentColor' } : {})} />
-                <div className="flex flex-col gap-1">
-                  <span className="text-[0.65rem] font-bold uppercase text-white/60">{label}</span>
-                  <div className="flex items-baseline gap-2">
-                    {loading ? <Skeleton className="h-6 w-16" /> : <span className="font-display text-[1.4rem] font-extrabold text-white leading-none">{value}</span>}
-                    {!loading && sub && <span className={subGreen ? 'text-[0.75rem] font-bold text-[#00CE17]' : 'text-[0.75rem] text-white/40'}>{sub}</span>}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+        <section className="hidden md:flex relative overflow-hidden rounded-xl border border-white/[0.1] bg-[#07140f] px-6 py-5 min-h-[150px] items-center justify-between gap-6">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_20%,rgba(175,232,5,0.18),transparent_28%),linear-gradient(120deg,rgba(0,26,172,0.32),transparent_42%),linear-gradient(90deg,rgba(3,63,45,0.92),rgba(10,10,10,0.96))]" />
+          <img src="/logo-mundial-2026.svg" alt="" className="absolute right-[34%] bottom-[-34px] h-[185px] w-[185px] opacity-[0.12]" />
 
-        <div className="flex items-center gap-2 pb-4 border-b border-white/[0.1] overflow-x-auto flex-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:gap-3 md:flex-wrap md:overflow-x-visible">
+          <div className="relative z-[1] flex flex-col gap-2">
+            <span className="inline-flex w-fit items-center gap-2 rounded-full border border-primary/35 bg-primary/[0.08] px-3 py-1 text-[0.68rem] font-black uppercase text-primary">
+              <Trophy className="h-3.5 w-3.5" />
+              Fixture oficial
+            </span>
+            <div>
+              <h2 className="font-display text-[2.35rem] font-black leading-none text-white">FIFA WORLD CUP</h2>
+              <p className="mt-1 max-w-[430px] text-[0.88rem] font-semibold text-white/64">
+                {countdown.started
+                  ? 'Disfrutá del Mundial en Prodeazo.'
+                  : 'Seguí cada partido, revisá fechas y prepará tus predicciones.'}
+              </p>
+            </div>
+          </div>
+
+          <div className="relative z-[1]">
+            {countdown.started ? (
+              <div className="flex items-center justify-center min-w-[200px] rounded-lg border border-white/[0.11] bg-black/35 px-5 py-4 backdrop-blur-sm">
+                <span className="font-display text-[1.1rem] font-bold text-white/90 text-center leading-snug">
+                  ¡El Mundial ya comenzó!<br />Disfrutalo en Prodeazo
+                </span>
+              </div>
+            ) : (
+              <div className="grid grid-cols-4 gap-2">
+                {([
+                  ['Días', countdown.days],
+                  ['Horas', countdown.hours],
+                  ['Min', countdown.minutes],
+                  ['Seg', countdown.seconds],
+                ] as const).map(([label, value]) => (
+                  <div key={label} className="min-w-[74px] rounded-lg border border-white/[0.11] bg-black/35 px-3 py-2.5 text-center backdrop-blur-sm">
+                    <span className="font-display text-[1.85rem] font-black leading-none text-primary">
+                      {String(value).padStart(label === 'Días' ? 1 : 2, '0')}
+                    </span>
+                    <span className="mt-1 block text-[0.62rem] font-black uppercase text-white/46">{label}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
+
+        <div className="flex flex-wrap items-center gap-2 pb-4 border-b border-white/[0.1] md:gap-3">
           {tournaments.length > 0 && (
-            <div className="relative flex-shrink-0" ref={tournamentRef}>
-              <button type="button" className="flex items-center gap-2 px-4 py-2.5 bg-white/[0.05] border border-white/[0.1] rounded-lg text-white text-[0.85rem] font-medium cursor-pointer" onClick={() => setTournamentOpen(v => !v)}>
+            <div className="relative flex-shrink-0 max-md:w-full" ref={tournamentRef}>
+              <button type="button" className="flex w-full items-center justify-between gap-2 px-4 py-2.5 bg-white/[0.05] border border-white/[0.1] rounded-lg text-white text-[0.85rem] font-medium cursor-pointer" onClick={() => setTournamentOpen(v => !v)}>
                 {tournamentIcon ? (
                   <img src={tournamentIcon} alt="" className="w-5 h-5 object-contain" />
                 ) : (
                   <Trophy className="w-4 h-4 text-white/50" />
                 )}
-                {activeTournament?.shortName ?? activeTournament?.name ?? 'Torneo'}
+                <span className="flex-1 text-left">{getTournamentDisplayName(activeTournament?.shortName ?? activeTournament?.name)}</span>
                 <ChevronDown className="w-4 h-4 text-white/50" />
               </button>
-              {tournamentOpen && tournaments.length > 1 && (
-                <div className="absolute top-[calc(100%+6px)] left-0 min-w-[200px] bg-[#141414] border border-white/[0.12] rounded-xl p-1.5 shadow-[0_12px_40px_rgba(0,0,0,0.5)] z-50 flex flex-col gap-0.5">
+              <AnimatePresence>
+              {tournamentOpen && (
+                <motion.div {...DROPDOWN_MOTION} className="absolute top-[calc(100%+6px)] left-0 min-w-[200px] bg-[#141414] border border-white/[0.12] rounded-xl p-1.5 shadow-[0_12px_40px_rgba(0,0,0,0.5)] z-50 flex flex-col gap-0.5">
                   {tournaments.map(t => {
                     const icon = getTournamentIconUrl(t.leagueId);
                     return (
@@ -264,23 +397,25 @@ export default function FixturePage() {
                         ) : (
                           <Trophy className="w-[18px] h-[18px] text-primary flex-shrink-0" />
                         )}
-                        {t.name}
+                        {getTournamentDisplayName(t.name)}
                       </button>
                     );
                   })}
-                </div>
+                </motion.div>
               )}
+              </AnimatePresence>
             </div>
           )}
 
-          <div className="relative flex-shrink-0" ref={sortRef}>
-            <button type="button" className="flex items-center gap-2 px-4 py-2.5 bg-white/[0.05] border border-white/[0.1] rounded-lg text-white text-[0.85rem] font-medium cursor-pointer" onClick={() => setSortOpen(v => !v)}>
+          <div className="relative flex-shrink-0 max-md:w-full" ref={sortRef}>
+            <button type="button" className={`flex w-full items-center justify-between gap-2 px-4 py-2.5 bg-white/[0.05] border rounded-lg text-white text-[0.85rem] font-medium cursor-pointer transition-colors duration-150 ${sortMode !== 'recommended' ? 'border-primary/40 bg-primary/[0.06]' : 'border-white/[0.1]'}`} onClick={() => setSortOpen(v => !v)}>
               <ArrowUpDown className="w-4 h-4 text-white/50" />
-              {SORT_LABELS[sortMode]}
+              <span className="flex-1 text-left">{SORT_LABELS[sortMode]}</span>
               <ChevronDown className="w-4 h-4 text-white/50" />
             </button>
+            <AnimatePresence>
             {sortOpen && (
-              <div className="absolute top-[calc(100%+6px)] left-0 min-w-[200px] bg-[#141414] border border-white/[0.12] rounded-xl p-1.5 shadow-[0_12px_40px_rgba(0,0,0,0.5)] z-50 flex flex-col gap-0.5">
+              <motion.div {...DROPDOWN_MOTION} className="absolute top-[calc(100%+6px)] left-0 min-w-[200px] bg-[#141414] border border-white/[0.12] rounded-xl p-1.5 shadow-[0_12px_40px_rgba(0,0,0,0.5)] z-50 flex flex-col gap-0.5">
                 {(Object.keys(SORT_LABELS) as FixtureSortMode[]).map(mode => (
                   <button
                     key={mode}
@@ -291,17 +426,20 @@ export default function FixturePage() {
                     {SORT_LABELS[mode]}
                   </button>
                 ))}
-              </div>
+              </motion.div>
             )}
+            </AnimatePresence>
           </div>
 
-          <div className="relative flex-shrink-0" ref={roundRef}>
-            <button type="button" className="flex items-center gap-2 px-4 py-2.5 bg-white/[0.05] border border-white/[0.1] rounded-lg text-white text-[0.85rem] font-medium cursor-pointer" onClick={() => setRoundOpen(v => !v)}>
-              {selectedRound ?? 'Todas las fases'}
+          <div className="relative flex-shrink-0 max-md:w-full" ref={roundRef}>
+            <button type="button" className={`flex w-full items-center justify-between gap-2 px-4 py-2.5 bg-white/[0.05] border rounded-lg text-white text-[0.85rem] font-medium cursor-pointer transition-colors duration-150 ${selectedRound ? 'border-primary/40 bg-primary/[0.06]' : 'border-white/[0.1]'}`} onClick={() => setRoundOpen(v => !v)}>
+              <Trophy className="w-4 h-4 text-white/50" />
+              <span className="flex-1 text-left">{selectedRound ? formatRoundName(selectedRound) : 'Todas las fases'}</span>
               <ChevronDown className="w-4 h-4 text-white/50" />
             </button>
+            <AnimatePresence>
             {roundOpen && (
-              <div className="absolute top-[calc(100%+6px)] left-0 min-w-[200px] bg-[#141414] border border-white/[0.12] rounded-xl p-1.5 shadow-[0_12px_40px_rgba(0,0,0,0.5)] z-50 flex flex-col gap-0.5">
+              <motion.div {...DROPDOWN_MOTION} className="absolute top-[calc(100%+6px)] left-0 min-w-[200px] bg-[#141414] border border-white/[0.12] rounded-xl p-1.5 shadow-[0_12px_40px_rgba(0,0,0,0.5)] z-50 flex flex-col gap-0.5">
                 <button
                   type="button"
                   className={`w-full flex items-center gap-2.5 text-left px-3 py-[9px] border-none rounded-lg bg-transparent text-[0.85rem] font-medium cursor-pointer transition-all duration-150 ${!selectedRound ? 'bg-primary/[0.12] text-primary' : 'text-white/70 hover:bg-white/[0.06] hover:text-white'}`}
@@ -316,7 +454,7 @@ export default function FixturePage() {
                     className={`w-full flex items-center gap-2.5 text-left px-3 py-[9px] border-none rounded-lg bg-transparent text-[0.85rem] font-medium cursor-pointer transition-all duration-150 ${r === selectedRound ? 'bg-primary/[0.12] text-primary' : 'text-white/70 hover:bg-white/[0.06] hover:text-white'}`}
                     onClick={() => { setSelectedRound(r); setRoundOpen(false); }}
                   >
-                    {r}
+                    {formatRoundName(r)}
                   </button>
                 ))}
                 {totalRoundPages > 1 && (
@@ -330,31 +468,49 @@ export default function FixturePage() {
                     </button>
                   </div>
                 )}
-              </div>
+              </motion.div>
             )}
+            </AnimatePresence>
           </div>
 
-          <div className="flex gap-1.5 flex-shrink-0">
-            {(Object.keys(STATUS_LABELS) as StatusFilter[]).map(s => (
-              <button
-                key={s}
-                type="button"
-                className={`px-3.5 py-2 rounded-lg border text-[0.8rem] font-medium cursor-pointer whitespace-nowrap transition-all duration-150 ${statusFilter === s ? 'bg-primary/[0.15] border-primary/40 text-primary' : 'border-white/[0.1] bg-white/[0.04] text-white/60 hover:bg-white/[0.08] hover:text-white'}`}
-                onClick={() => setStatusFilter(s)}
-              >
-                {STATUS_LABELS[s]}
-              </button>
-            ))}
+          <div className="relative flex-shrink-0 max-md:w-full" ref={statusRef}>
+            <button type="button" className={`flex w-full items-center justify-between gap-2 px-4 py-2.5 bg-white/[0.05] border rounded-lg text-white text-[0.85rem] font-medium cursor-pointer transition-colors duration-150 ${statusFilter !== 'all' ? 'border-primary/40 bg-primary/[0.06]' : 'border-white/[0.1]'}`} onClick={() => setStatusOpen(v => !v)}>
+              <svg xmlns="http://www.w3.org/2000/svg" height="16px" viewBox="0 -960 960 960" width="16px" fill="currentColor" className="text-white/50"><path d="M440-200q-100 0-170-70t-70-170q0-11 1-22t3-22q-5 2-12 3t-12 1q-42 0-71-29t-29-71q0-42 27.5-71t69.5-29q33 0 59.5 18.5T274-614q33-30 75.5-48t90.5-18h440v160H680v80q0 100-70 170t-170 70ZM208.5-551.5Q220-563 220-580t-11.5-28.5Q197-620 180-620t-28.5 11.5Q140-597 140-580t11.5 28.5Q163-540 180-540t28.5-11.5ZM539-341q41-41 41-99t-41-99q-41-41-99-41t-99 41q-41 41-41 99t41 99q41 41 99 41t99-41Zm-42.5-42.5Q520-407 520-440t-23.5-56.5Q473-520 440-520t-56.5 23.5Q360-473 360-440t23.5 56.5Q407-360 440-360t56.5-23.5ZM440-440Z"/></svg>
+              <span className="flex-1 text-left">{STATUS_LABELS[statusFilter]}</span>
+              <ChevronDown className="w-4 h-4 text-white/50" />
+            </button>
+            <AnimatePresence>
+            {statusOpen && (
+              <motion.div {...DROPDOWN_MOTION} className="absolute top-[calc(100%+6px)] left-0 min-w-[180px] bg-[#141414] border border-white/[0.12] rounded-xl p-1.5 shadow-[0_12px_40px_rgba(0,0,0,0.5)] z-50 flex flex-col gap-0.5">
+                {STATUS_OPTIONS.map(s => (
+                  <button
+                    key={s}
+                    type="button"
+                    className={`w-full flex items-center gap-2.5 text-left px-3 py-[9px] border-none rounded-lg bg-transparent text-[0.85rem] font-medium cursor-pointer transition-all duration-150 ${s === statusFilter ? 'bg-primary/[0.12] text-primary' : 'text-white/70 hover:bg-white/[0.06] hover:text-white'}`}
+                    onClick={() => { setStatusFilter(s); setStatusOpen(false); }}
+                  >
+                    {STATUS_LABELS[s]}
+                  </button>
+                ))}
+              </motion.div>
+            )}
+            </AnimatePresence>
           </div>
-
-          <button type="button" className="ml-auto flex items-center gap-2 px-4 py-2.5 bg-transparent border border-white/[0.2] rounded-lg text-white text-[0.85rem] font-medium cursor-pointer flex-shrink-0 whitespace-nowrap transition-colors duration-200 hover:bg-white/[0.05]">
-            <Calendar className="w-4 h-4 text-white/50" />
-            Ver calendario
-          </button>
         </div>
 
+        <label className="flex items-center gap-3 rounded-xl border border-white/[0.1] bg-white/[0.04] px-4 py-3 text-white transition-colors duration-200 focus-within:border-primary/40 focus-within:bg-white/[0.06]">
+          <Search className="w-4 h-4 shrink-0 text-white/45" />
+          <input
+            value={searchQuery}
+            onChange={event => setSearchQuery(event.target.value)}
+            placeholder='Buscar partidos, equipos, fases... (Por ejemplo "Argentina", "Semifinales")'
+            className="min-w-0 flex-1 bg-transparent text-[0.9rem] font-semibold text-white outline-none placeholder:text-white/35"
+            type="search"
+          />
+        </label>
+
         <div className="overflow-x-hidden">
-          <div className="hidden sm:grid [grid-template-columns:100px_minmax(0,1fr)_92px_92px] gap-4 px-4 py-2 text-[0.7rem] font-bold text-white/40 uppercase sticky top-16 z-[2] bg-[#0a0a0a]">
+          <div className="hidden sm:grid [grid-template-columns:100px_minmax(0,1fr)_92px_92px] gap-4 px-4 py-2 mb-2 text-[0.7rem] font-black text-white/40 uppercase">
             <div>FECHA</div>
             <div className="text-center">PARTIDO</div>
             <div className="text-center">MARCADOR</div>
@@ -385,17 +541,17 @@ export default function FixturePage() {
                   const tone = getPredictionBadgeTone(f, pred);
                   return (
                     <motion.div key={f.id} variants={fadeInUp} className="flex flex-col gap-3 p-3 bg-white/[0.02] rounded-lg mb-1 transition-colors duration-200 hover:bg-white/[0.05] sm:grid sm:[grid-template-columns:100px_minmax(0,1fr)_92px_92px] sm:gap-4 sm:p-4">
-                      <div className="flex flex-col gap-1">
-                        <span className="text-[0.95rem] font-bold text-white">
+                      <div className="flex flex-col gap-1 max-md:items-center max-md:text-center">
+                        <span className="text-[1.05rem] font-bold text-white">
                           {f.date
-                            ? new Date(f.date).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
+                            ? new Date(f.date).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false })
                             : '--:--'}
                         </span>
-                        <span className="text-[0.65rem] text-white/55 leading-[1.3] font-semibold">{formatFixturePhase(f)}</span>
+                        <span className="text-[0.7rem] text-white/60 leading-[1.3] font-bold">{formatFixturePhase(f)}</span>
                       </div>
                       <div className="flex items-center justify-center gap-2 sm:gap-4">
                         <div className="flex-1 flex items-center justify-end gap-3 text-[0.95rem] font-semibold text-white min-w-0">
-                          <span className="overflow-hidden text-ellipsis whitespace-nowrap min-w-0">
+                          <span className="overflow-hidden text-ellipsis whitespace-nowrap min-w-0 max-md:whitespace-normal max-md:text-center max-md:leading-tight max-md:break-words">
                             {getCountryName(f.homeTeam?.name)}
                           </span>
                           <TeamLogo name={f.homeTeam?.name} logoUrl={f.homeTeam?.logoUrl} />
@@ -403,7 +559,7 @@ export default function FixturePage() {
                         <span className="text-[0.8rem] font-bold text-white/30 flex-shrink-0">VS</span>
                         <div className="flex-1 flex items-center justify-start gap-3 text-[0.95rem] font-semibold text-white min-w-0">
                           <TeamLogo name={f.awayTeam?.name} logoUrl={f.awayTeam?.logoUrl} />
-                          <span className="overflow-hidden text-ellipsis whitespace-nowrap min-w-0">
+                          <span className="overflow-hidden text-ellipsis whitespace-nowrap min-w-0 max-md:whitespace-normal max-md:text-center max-md:leading-tight max-md:break-words">
                             {getCountryName(f.awayTeam?.name)}
                           </span>
                         </div>
@@ -423,19 +579,23 @@ export default function FixturePage() {
           )}
         </div>
 
-        <div className="flex-none flex items-start justify-center flex-wrap gap-x-6 gap-y-3 px-4 py-3 bg-white/[0.02] rounded-xl sm:items-center sm:gap-8 sm:p-4 sm:flex-nowrap">
-          {([
-            { color: 'bg-[#00CE17]', title: '¡Vas ganando!', desc: 'Tu predicción es correcta' },
-            { color: 'bg-[#FFCC00]', title: 'En riesgo', desc: 'Tu predicción puede fallar' },
-            { color: 'bg-[#D50204]', title: 'Vas perdiendo', desc: 'Tu predicción no se está cumpliendo' },
-            { color: 'bg-white/30', title: 'Sin comenzar', desc: 'Aún no hiciste tu predicción o no empezó' },
-          ]).map(({ color, title, desc }) => (
-            <div key={title} className="flex items-center gap-2 text-[0.75rem] text-white/60">
-              <div className={`w-3 h-3 rounded-full flex-shrink-0 ${color}`} />
-              <span className="font-bold text-white">{title}</span> {desc}
-            </div>
-          ))}
-        </div>
+        <AnimatePresence>
+          {showBackTop && (
+            <motion.button
+              type="button"
+              aria-label="Volver arriba"
+              onClick={scrollToTop}
+              className="group fixed right-5 bottom-6 z-[90] flex h-11 w-11 items-center justify-center rounded-full border border-primary/40 bg-[#111]/95 text-primary shadow-[0_14px_40px_rgba(0,0,0,0.45)] backdrop-blur-md transition-colors duration-200 hover:bg-primary hover:text-black cursor-pointer"
+              initial={{ opacity: 0, y: -8, scale: 0.92 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -8, scale: 0.92 }}
+              transition={{ duration: 0.18, ease: 'easeOut' }}
+            >
+              <ArrowUp className="h-5 w-5 group-hover:text-black transition-colors duration-200" />
+            </motion.button>
+          )}
+        </AnimatePresence>
+
       </main>
     </>
   );

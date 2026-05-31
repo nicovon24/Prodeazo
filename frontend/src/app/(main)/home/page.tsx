@@ -8,6 +8,7 @@ import {
   BarChart2,
   CalendarDays,
   CheckCircle,
+  Hourglass,
   ArrowRight,
   History,
   Target,
@@ -20,6 +21,7 @@ import {
   type DashboardMe,
   type DashboardPanels,
 } from "../../../api/dashboard";
+import { fetchPredictions } from "../../../api/predictions";
 import {
   PendingMatchRow,
   RecentResultRow,
@@ -34,23 +36,78 @@ function formatCount(n: number): string {
   return n.toLocaleString("es-AR");
 }
 
+function getPanelMatchLimit(width: number, height: number): number {
+  if (width < 768) {
+    if (height < 760) return 2;
+    return 3;
+  }
+
+  if (width < 1024) {
+    if (height < 760) return 3;
+    if (height < 900) return 4;
+    if (height < 1060) return 5;
+    return 6;
+  }
+
+  if (height < 720) return 3;
+  if (height < 820) return 4;
+  if (height < 940) return 5;
+  if (height < 1060) return 6;
+  if (height < 1200) return 8;
+  return 10;
+}
+
 export default function HomePage() {
   const { user } = useAuth();
   const [dashboard, setDashboard] = useState<DashboardMe | null>(null);
   const [panels, setPanels] = useState<DashboardPanels | null>(null);
   const [loadingStats, setLoadingStats] = useState(true);
   const [loadingPanels, setLoadingPanels] = useState(true);
+  const [panelMatchLimit, setPanelMatchLimit] = useState(4);
+
+  useEffect(() => {
+    function updatePanelMatchLimit() {
+      setPanelMatchLimit(getPanelMatchLimit(window.innerWidth, window.innerHeight));
+    }
+
+    updatePanelMatchLimit();
+    window.addEventListener("resize", updatePanelMatchLimit);
+    return () => window.removeEventListener("resize", updatePanelMatchLimit);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
     setLoadingStats(true);
     setLoadingPanels(true);
 
-    Promise.all([fetchDashboardMe(), fetchDashboardPanels()])
-      .then(([stats, panelData]) => {
+    Promise.all([
+      fetchDashboardMe(),
+      fetchDashboardPanels(),
+      fetchPredictions().catch(() => []),
+    ])
+      .then(([stats, panelData, predictions]) => {
         if (!cancelled) {
+          const predictionsByFixture = new Map(
+            predictions.map((prediction) => [prediction.fixtureId, prediction])
+          );
+          const mergedPanelData: DashboardPanels = {
+            ...panelData,
+            upcomingWithPrediction: panelData.upcomingWithPrediction.map((match) => {
+              const prediction = predictionsByFixture.get(match.fixtureId);
+              return {
+                ...match,
+                prediction: match.prediction ?? (prediction
+                  ? {
+                      homeGoals: prediction.homeGoals,
+                      awayGoals: prediction.awayGoals,
+                    }
+                  : null),
+              };
+            }),
+          };
+
           setDashboard(stats);
-          setPanels(panelData);
+          setPanels(mergedPanelData);
         }
       })
       .catch(() => {
@@ -74,8 +131,9 @@ export default function HomePage() {
   const participantCount = dashboard?.participantCount ?? 0;
   const globalRank = dashboard?.globalRank ?? null;
   const totalPoints = dashboard?.totalPoints ?? 0;
-  const correctPredictions = dashboard?.correctPredictions ?? 0;
-  const precision = dashboard?.precision ?? 0;
+  const recentResults = panels?.recentResults.slice(0, panelMatchLimit) ?? [];
+  const upcomingWithPrediction = panels?.upcomingWithPrediction.slice(0, panelMatchLimit) ?? [];
+  const pendingPredictions = panels?.pendingPredictions.slice(0, panelMatchLimit) ?? [];
 
   return (
     <>
@@ -113,9 +171,9 @@ export default function HomePage() {
               <div className="mt-auto pt-2">
                 <Link
                   href="/rankings"
-                  className="w-full flex items-center justify-center p-2 min-h-[36px] bg-white/[0.03] border border-white/[0.06] rounded-lg text-white text-[0.78rem] font-semibold cursor-pointer transition-all duration-200 no-underline hover:bg-white/[0.08]"
+                  className="w-full flex items-center justify-center p-2 min-h-[36px] bg-white/[0.03] border border-white/[0.06] rounded-lg text-white text-[0.78rem] font-semibold cursor-pointer transition-all duration-300 no-underline hover:bg-white/[0.08]"
                 >
-                  Ver ranking
+                  Ver rankings
                 </Link>
               </div>
             </motion.div>
@@ -137,7 +195,7 @@ export default function HomePage() {
               <div className="mt-auto pt-2">
                 <Link
                   href="/leagues"
-                  className="w-full flex items-center justify-center p-2 min-h-[36px] bg-white/[0.03] border border-white/[0.06] rounded-lg text-white text-[0.78rem] font-semibold cursor-pointer transition-all duration-200 no-underline hover:bg-white/[0.08]"
+                  className="w-full flex items-center justify-center p-2 min-h-[36px] bg-white/[0.03] border border-white/[0.06] rounded-lg text-white text-[0.78rem] font-semibold cursor-pointer transition-all duration-300 no-underline hover:bg-white/[0.08]"
                 >
                   Ver ligas
                 </Link>
@@ -150,26 +208,34 @@ export default function HomePage() {
                 <BarChart2 className="w-4 h-4 text-primary" />
                 Mis estadísticas
               </div>
-              <div className="grid grid-cols-3 gap-2 w-full">
+              <div className="flex justify-between items-center w-full">
                 <div className="flex flex-col">
                   <span className="text-[0.6rem] uppercase text-white/50 font-semibold mb-1">Puntos</span>
                   <span className="font-display text-xl font-extrabold text-primary">{formatCount(totalPoints)}</span>
                 </div>
-                <div className="flex flex-col">
-                  <span className="text-[0.6rem] uppercase text-white/50 font-semibold mb-1">Acertados</span>
-                  <span className="font-display text-xl font-extrabold text-primary">{formatCount(correctPredictions)}</span>
+                <div className="flex flex-col items-center">
+                  <span className="text-[0.6rem] uppercase text-white/50 font-semibold mb-1">Jugadas</span>
+                  <span className="font-display text-xl font-extrabold text-primary">{formatCount(dashboard?.scoredPredictions ?? 0)}</span>
                 </div>
-                <div className="flex flex-col">
-                  <span className="text-[0.6rem] uppercase text-white/50 font-semibold mb-1">Precisión</span>
-                  <span className="font-display text-xl font-extrabold text-primary">{`${precision}%`}</span>
+                <div className="flex flex-col items-end">
+                  <span className="text-[0.6rem] uppercase text-white/50 font-semibold mb-1">Registro</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-display text-xl font-extrabold text-[#00CE17]">
+                      {dashboard?.exactPredictions ?? 0}
+                    </span>
+                    <span className="text-white/30 font-bold text-lg">—</span>
+                    <span className="font-display text-xl font-extrabold text-[#FFCC00]">
+                      {dashboard?.partialPredictions ?? 0}
+                    </span>
+                  </div>
                 </div>
               </div>
               <div className="mt-auto pt-2">
                 <Link
                   href="/rankings"
-                  className="w-full flex items-center justify-center p-2 min-h-[36px] bg-white/[0.03] border border-white/[0.06] rounded-lg text-white text-[0.78rem] font-semibold cursor-pointer transition-all duration-200 no-underline hover:bg-white/[0.08]"
+                  className="w-full flex items-center justify-center p-2 min-h-[36px] bg-white/[0.03] border border-white/[0.06] rounded-lg text-white text-[0.78rem] font-semibold cursor-pointer transition-all duration-300 no-underline hover:bg-white/[0.08]"
                 >
-                  Ver detalles
+                  Ver rankings
                 </Link>
               </div>
             </motion.div>
@@ -184,125 +250,137 @@ export default function HomePage() {
             <MatchPanelSkeleton />
           </div>
         ) : (
-          <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            <div className="bg-white/[0.03] border border-white/[0.08] rounded-xl flex flex-col min-h-0 overflow-hidden">
+          <motion.div
+            className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3"
+            variants={staggerContainer}
+            initial="hidden"
+            animate="visible"
+          >
+            <motion.div variants={scaleIn} className="bg-white/[0.03] border border-white/[0.08] rounded-xl flex flex-col min-h-0 overflow-hidden">
               <div className="flex-none px-3 pt-3 pb-2.5 flex items-center gap-2 text-[0.72rem] font-bold uppercase text-white border-b border-white/[0.05]">
                 <History className="w-4 h-4 text-primary" />
                 Últimos resultados
               </div>
               <div className="flex-1 min-h-0 overflow-y-auto flex flex-col p-2 gap-1.5">
-                {panels?.recentResults.length ? (
-                  panels.recentResults.map((m) => (
+                {recentResults.length ? (
+                  recentResults.map((m) => (
                     <RecentResultRow key={m.fixtureId} match={m} />
                   ))
                 ) : (
                   <div className="flex flex-col items-center justify-center text-center px-4 py-6 gap-2 min-h-[140px]">
                     <Target className="w-9 h-9 text-white/20" />
                     <p className="text-[0.8rem] leading-[1.4] text-white/55 max-w-[220px]">
-                      ¡Aún no participaste en ninguna predicción!
+                      ¡Aún no obtuviste ningún resultado!
                     </p>
-                    <Link href="/predictions" className="text-primary text-[0.8rem] font-bold underline underline-offset-[3px] hover:text-white">
-                      Predecí un partido
-                    </Link>
                   </div>
                 )}
               </div>
               {(panels?.recentResults.length ?? 0) > 0 && (
                 <div className="flex-none p-2.5 border-t border-white/[0.05]">
                   <Link
-                    href="/predictions"
-                    className="w-full block text-center p-2 min-h-[34px] leading-[18px] bg-white/[0.03] border border-white/[0.06] rounded-lg text-white text-[0.75rem] font-semibold no-underline hover:bg-white/[0.08]"
+                    href="/predictions?tab=results"
+                    className="w-full block text-center p-2 min-h-[34px] leading-[18px] bg-white/[0.03] border border-white/[0.06] rounded-lg text-white text-[0.75rem] font-semibold no-underline hover:bg-white/[0.08] transition-all duration-300"
                   >
-                    Ir a mis predicciones
+                    Ver mis resultados
                   </Link>
                 </div>
               )}
-            </div>
+            </motion.div>
 
-            <div className="bg-white/[0.03] border border-white/[0.08] rounded-xl flex flex-col min-h-0 overflow-hidden">
+            <motion.div variants={scaleIn} className="bg-white/[0.03] border border-white/[0.08] rounded-xl flex flex-col min-h-0 overflow-hidden">
               <div className="flex-none px-3 pt-3 pb-2.5 flex items-center gap-2 text-[0.72rem] font-bold uppercase text-white border-b border-white/[0.05]">
-                <CalendarDays className="w-4 h-4 text-primary" />
+                <CheckCircle className="w-4 h-4 text-primary" />
                 Próximos con tu predicción
               </div>
               <div className="flex-1 min-h-0 overflow-y-auto flex flex-col p-2 gap-1.5">
-                {panels?.upcomingWithPrediction.length ? (
-                  panels.upcomingWithPrediction.map((m) => (
-                    <UpcomingMatchRow key={m.fixtureId} match={m} />
+                {upcomingWithPrediction.length ? (
+                  upcomingWithPrediction.map((m) => (
+                    <UpcomingMatchRow key={m.fixtureId} match={m} prediction={m.prediction} />
                   ))
                 ) : (
-                  <div className="flex flex-col items-center justify-center text-center px-4 py-6 gap-2 min-h-[140px]">
+                  <div className="flex flex-col items-center justify-center text-center px-4 py-6 gap-3 min-h-[140px]">
                     <CalendarDays className="w-9 h-9 text-white/20" />
                     <p className="text-[0.8rem] leading-[1.4] text-white/55 max-w-[220px]">
                       No tenés predicciones en partidos próximos o en vivo.
                     </p>
+                    <Link
+                      href="/predictions"
+                      className="mt-1 bg-primary text-black rounded-lg text-[0.8rem] font-bold px-4 py-2.5 transition-all duration-200 hover:opacity-90 active:scale-95 no-underline"
+                    >
+                      ¡Hacé tu primera predicción!
+                    </Link>
                   </div>
                 )}
               </div>
               {(panels?.upcomingWithPrediction.length ?? 0) > 0 && (
-                <div className="flex-none p-2.5 border-t border-white/[0.05]">
+                <div className="flex-none p-2.5 border-t border-white/[0.05] grid grid-cols-2 gap-2">
+                  <a
+                    href="/predictions?tab=saved"
+                    className="flex-1 block text-center p-2 min-h-[34px] leading-[18px] bg-white/[0.03] border border-white/[0.06] rounded-lg text-white text-[0.75rem] font-semibold no-underline hover:bg-white/[0.08] transition-all duration-300"
+                  >
+                    Ver mis predicciones
+                  </a>
                   <Link
                     href="/fixture"
-                    className="w-full block text-center p-2 min-h-[34px] leading-[18px] bg-white/[0.03] border border-white/[0.06] rounded-lg text-white text-[0.75rem] font-semibold no-underline hover:bg-white/[0.08]"
+                    className="flex-1 block text-center p-2 min-h-[34px] leading-[18px] bg-white/[0.03] border border-white/[0.06] rounded-lg text-white text-[0.75rem] font-semibold no-underline hover:bg-white/[0.08] transition-all duration-300"
                   >
                     Ver fixture completo
                   </Link>
                 </div>
               )}
-            </div>
+            </motion.div>
 
-            <div className="bg-white/[0.03] border border-white/[0.08] rounded-xl flex flex-col min-h-0 overflow-hidden md:col-span-2 lg:col-span-1">
+            <motion.div variants={scaleIn} className="bg-white/[0.03] border border-white/[0.08] rounded-xl flex flex-col min-h-0 overflow-hidden md:col-span-2 lg:col-span-1">
               <div className="flex-none px-3 pt-3 pb-2.5 flex items-center gap-2 text-[0.72rem] font-bold uppercase text-white border-b border-white/[0.05]">
-                <CheckCircle className="w-4 h-4 text-primary" />
+                <Hourglass className="w-4 h-4 text-primary" />
                 Pendientes de predicción
-                {(panels?.pendingPredictions.length ?? 0) > 0 && (
+                {(panels?.pendingPredictionsTotal ?? 0) > 0 && (
                   <span className="bg-[#D50204] text-white text-[0.6rem] font-bold h-4.5 min-w-[18px] rounded-full flex items-center justify-center px-1.5 ml-auto">
-                    {panels!.pendingPredictions.length}
+                    {panels!.pendingPredictionsTotal}
                   </span>
                 )}
               </div>
               <div className="flex-1 min-h-0 overflow-y-auto flex flex-col p-2 gap-1.5">
-                {panels?.pendingPredictions.length ? (
-                  panels.pendingPredictions.slice(0, 4).map((m) => (
-                    <div key={m.fixtureId} className="flex items-center gap-2">
-                      <div className="flex-1 min-w-0">
-                        <PendingMatchRow match={m} />
-                      </div>
-                      <Link
-                        href="/predictions"
-                        className="bg-primary text-black border-none rounded-md text-[0.7rem] font-bold px-3 py-1.5 min-h-[32px] flex items-center cursor-pointer transition-opacity duration-200 no-underline shrink-0 hover:opacity-90"
-                      >
-                        Predecir
-                      </Link>
-                    </div>
+                {pendingPredictions.length ? (
+                  pendingPredictions.map((m) => (
+                    <PendingMatchRow key={m.fixtureId} match={m} />
                   ))
                 ) : (
                   <div className="flex flex-col items-center justify-center text-center px-4 py-6 gap-2 min-h-[140px]">
-                    <CheckCircle className="w-9 h-9 text-white/20" />
+                    <Hourglass className="w-9 h-9 text-white/20" />
                     <p className="text-[0.8rem] leading-[1.4] text-white/55 max-w-[220px]">
                       ¡Ya no te quedan partidos por predecir!
                     </p>
                   </div>
                 )}
               </div>
-              {(panels?.pendingPredictions.length ?? 0) > 4 && (
+              {/* Always-visible footer button for Pendientes */}
+              {(panels?.pendingPredictions.length ?? 0) > 0 && (
                 <div className="flex-none p-2.5 border-t border-white/[0.05]">
                   <Link
-                    href="/predictions"
-                    className="w-full block text-center p-2 min-h-[34px] leading-[18px] bg-white/[0.03] border border-white/[0.06] rounded-lg text-white text-[0.75rem] font-semibold no-underline hover:bg-white/[0.08]"
+                    href="/predictions?tab=pending"
+                    className="w-full block text-center p-2 min-h-[34px] leading-[18px] bg-white/[0.03] border border-white/[0.06] rounded-lg text-white text-[0.75rem] font-semibold no-underline hover:bg-white/[0.08] transition-all duration-300"
                   >
-                    Ver todos los pendientes ({panels!.pendingPredictions.length})
+                    {(panels?.pendingPredictionsTotal ?? 0) > 4
+                      ? `Ver todos los pendientes (${panels!.pendingPredictionsTotal})`
+                      : 'Ver mis pendientes'}
                   </Link>
                 </div>
               )}
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
         )}
 
         {/* CTA Banners */}
-        <div className="flex-none grid grid-cols-1 md:grid-cols-3 gap-3">
+        <motion.div
+          className="flex-none grid grid-cols-1 md:grid-cols-3 gap-3"
+          variants={staggerContainer}
+          initial="hidden"
+          animate="visible"
+        >
           <Link
             href="/predictions"
-            className="rounded-xl p-4 flex flex-col min-h-[96px] relative overflow-hidden no-underline transition-transform duration-200 hover:-translate-y-0.5 bg-gradient-to-br from-[#AFE805] to-[#85b300] text-black"
+            className="rounded-xl p-4 flex flex-col min-h-[96px] relative overflow-hidden no-underline transition-transform duration-200 hover:-translate-y-0.5 active:scale-[0.97] bg-gradient-to-br from-[#AFE805] to-[#85b300] text-black"
           >
             <h3 className="font-display text-[1rem] font-extrabold uppercase mb-1 z-[2]">Mi Prode</h3>
             <p className="text-[0.78rem] font-medium max-w-[75%] opacity-90 z-[2]">Hacé tus predicciones y seguí tu progreso.</p>
@@ -314,7 +392,7 @@ export default function HomePage() {
 
           <Link
             href="/rankings"
-            className="rounded-xl p-4 flex flex-col min-h-[96px] relative overflow-hidden no-underline transition-transform duration-200 hover:-translate-y-0.5 bg-gradient-to-br from-[#0052FF] to-[#001AAC] text-white"
+            className="rounded-xl p-4 flex flex-col min-h-[96px] relative overflow-hidden no-underline transition-transform duration-200 hover:-translate-y-0.5 active:scale-[0.97] bg-gradient-to-br from-[#0052FF] to-[#001AAC] text-white"
           >
             <h3 className="font-display text-[1rem] font-extrabold uppercase mb-1 z-[2]">Rankings</h3>
             <p className="text-[0.78rem] font-medium max-w-[75%] opacity-90 z-[2]">Compará tu posición con otros participantes.</p>
@@ -326,7 +404,7 @@ export default function HomePage() {
 
           <Link
             href="/leagues"
-            className="rounded-xl p-4 flex flex-col min-h-[96px] relative overflow-hidden no-underline transition-transform duration-200 hover:-translate-y-0.5 bg-gradient-to-br from-[#FF3B30] to-[#D50204] text-white"
+            className="rounded-xl p-4 flex flex-col min-h-[96px] relative overflow-hidden no-underline transition-transform duration-200 hover:-translate-y-0.5 active:scale-[0.97] bg-gradient-to-br from-[#FF3B30] to-[#D50204] text-white"
           >
             <h3 className="font-display text-[1rem] font-extrabold uppercase mb-1 z-[2]">Ligas</h3>
             <p className="text-[0.78rem] font-medium max-w-[75%] opacity-90 z-[2]">Creá o unite a ligas y competí con tus amigos.</p>
@@ -335,7 +413,7 @@ export default function HomePage() {
             </div>
             <Users className="absolute bottom-[-16px] right-[-16px] w-[90px] h-[90px] opacity-20 z-[1]" />
           </Link>
-        </div>
+        </motion.div>
       </main>
     </>
   );

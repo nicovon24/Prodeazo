@@ -1,4 +1,5 @@
 "use client"
+import Link from 'next/link'
 import { format, isToday, isTomorrow } from 'date-fns'
 import { es } from 'date-fns/locale'
 import type { DashboardPanelMatch, DashboardPanelTeam, DashboardRecentResult } from '@/api/dashboard'
@@ -43,13 +44,19 @@ function TeamsRow({ match }: { match: DashboardPanelMatch }) {
   )
 }
 
-export function UpcomingMatchRow({ match }: { match: DashboardPanelMatch }) {
+export function UpcomingMatchRow({
+  match,
+  prediction,
+}: {
+  match: DashboardPanelMatch
+  prediction?: { homeGoals: number; awayGoals: number } | null
+}) {
   const kickoff = formatKickoff(match.date)
   const isLive = match.status === 'in_progress' || match.status === 'inprogress'
 
   return (
     <div className="flex items-center gap-2.5 p-2 px-2.5 bg-white/[0.02] rounded-lg border border-white/[0.05]">
-      <div className="flex flex-col gap-0.5 flex-shrink-0">
+      <div className="flex flex-col gap-0.5 flex-shrink-0 w-12">
         <span className="text-[0.67rem] font-bold text-white/50 uppercase">{kickoff.label}</span>
         <span className="text-[0.85rem] font-bold text-white">{kickoff.time}</span>
         {isLive ? (
@@ -61,19 +68,33 @@ export function UpcomingMatchRow({ match }: { match: DashboardPanelMatch }) {
       <div className="flex-1 min-w-0">
         <TeamsRow match={match} />
       </div>
+      {prediction != null && (
+        <div className="flex-shrink-0 flex items-center justify-center min-w-[46px] h-[28px] px-1.5 rounded-md bg-primary/[0.1] border border-primary/[0.3] text-primary text-[0.75rem] font-extrabold font-display">
+          {prediction.homeGoals}-{prediction.awayGoals}
+        </div>
+      )}
     </div>
   )
 }
+
 
 export function PendingMatchRow({ match }: { match: DashboardPanelMatch }) {
   const kickoff = formatKickoff(match.date)
 
   return (
-    <div className="flex flex-col gap-0.5 p-1.5 px-2 bg-white/[0.02] rounded-lg border border-white/[0.05]">
-      <span className="text-[0.62rem] font-semibold text-white/45 uppercase">
-        {kickoff.label} · {kickoff.time}
-      </span>
-      <TeamsRow match={match} />
+    <div className="flex items-center gap-2 p-2 bg-white/[0.02] rounded-lg border border-white/[0.05]">
+      <div className="flex flex-col gap-0.5 flex-1 min-w-0">
+        <span className="text-[0.62rem] font-semibold text-white/45 uppercase">
+          {kickoff.label} · {kickoff.time}
+        </span>
+        <TeamsRow match={match} />
+      </div>
+      <Link
+        href="/predictions"
+        className="bg-primary text-black border-none rounded-md text-[0.7rem] font-bold px-3 py-1.5 min-h-[32px] flex items-center cursor-pointer transition-all duration-150 no-underline shrink-0 hover:opacity-90 active:scale-95"
+      >
+        Predecir
+      </Link>
     </div>
   )
 }

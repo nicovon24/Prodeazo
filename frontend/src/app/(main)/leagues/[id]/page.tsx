@@ -347,7 +347,9 @@ export default function LeagueDetailPage() {
         {toast && (
           <div
             className={clsx(
-              "fixed top-7 right-7 z-[300] flex items-start gap-3.5 w-[min(420px,calc(100vw-56px))] p-4 rounded-[10px] shadow-[0_22px_60px_rgba(0,0,0,0.55),0_0_0_1px_rgba(255,255,255,0.04)_inset] overflow-hidden relative",
+              "fixed z-[300] flex items-start gap-3.5 p-4 rounded-[10px] shadow-[0_22px_60px_rgba(0,0,0,0.55),0_0_0_1px_rgba(255,255,255,0.04)_inset] overflow-hidden",
+              "md:top-7 md:right-7 md:w-[min(420px,calc(100vw-56px))]",
+              "max-md:bottom-4 max-md:left-4 max-md:right-4 max-md:w-auto",
               toast.tone === 'success'
                 ? "bg-[#111a12] border border-[rgba(0,206,23,0.32)] text-[#f1fff5] toast-bar-success"
                 : "bg-[#1e1112] border border-[rgba(213,2,4,0.36)] text-[#fff0f0] toast-bar-error"

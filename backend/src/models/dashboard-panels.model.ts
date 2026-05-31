@@ -1,7 +1,7 @@
 import { db } from '../db/client'
 import { fixtures, predictions, teams } from '../db/schema'
 import { FixtureStatus } from '../constants/fixture-status'
-import { and, eq, inArray, isNull, desc, asc } from 'drizzle-orm'
+import { sql, and, eq, inArray, isNull, desc, asc } from 'drizzle-orm'
 import { alias } from 'drizzle-orm/pg-core'
 
 const homeTeam = alias(teams, 'home_team')
@@ -32,8 +32,8 @@ type PanelRow = {
   awayTeamShortName: string | null
   homeTeamLogoUrl: string | null
   awayTeamLogoUrl: string | null
-  homeGoals: number
-  awayGoals: number
+  homeGoals: number | null
+  awayGoals: number | null
   points: number | null
 }
 
@@ -136,4 +136,17 @@ export async function findUserPendingFixtures(userId: string, limit = 5): Promis
     .limit(limit)
 
   return rows
+}
+
+export async function countUserPendingFixtures(userId: string): Promise<number> {
+  const result = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(fixtures)
+    .leftJoin(
+      predictions,
+      and(eq(predictions.fixtureId, fixtures.id), eq(predictions.userId, userId))
+    )
+    .where(and(inArray(fixtures.status, [...UPCOMING_STATUSES]), isNull(predictions.id)))
+
+  return result[0].count
 }

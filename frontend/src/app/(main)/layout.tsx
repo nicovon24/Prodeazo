@@ -51,18 +51,15 @@ export default function MainLayout({
       <TournamentInitializer />
       <Sidebar />
       <div className="main-content" style={{ display: "flex", flexDirection: "column" }}>
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={pathname}
-            variants={pageTransition}
-            initial="hidden"
-            animate="visible"
-            exit="exit"
-            style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0 }}
-          >
-            {children}
-          </motion.div>
-        </AnimatePresence>
+        <motion.div
+          key={pathname}
+          variants={pageTransition}
+          initial="hidden"
+          animate="visible"
+          style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0 }}
+        >
+          {children}
+        </motion.div>
       </div>
     </>
   );

@@ -9,8 +9,12 @@ import {
   UserCircle,
   LogOut,
   Menu,
+  X,
+  ArrowRight,
+  ArrowLeft
 } from "lucide-react";
 import clsx from "clsx";
+import { AnimatePresence, motion } from "framer-motion";
 import { useAuth } from "../../hooks/useAuth";
 import { useUIStore } from "../../store/useUIStore";
 
@@ -19,11 +23,32 @@ interface HeaderProps {
   subtitle?: string;
 }
 
+const Instagram = ({ className }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <defs>
+      <linearGradient id="ig-icon-stroke" x1="0" y1="0" x2="24" y2="24" gradientUnits="userSpaceOnUse">
+        <stop offset="0%" stopColor="#833ab4" />
+        <stop offset="50%" stopColor="#fd1d1d" />
+        <stop offset="100%" stopColor="#fcb045" />
+      </linearGradient>
+    </defs>
+    <rect x="2" y="2" width="20" height="20" rx="5" ry="5" stroke="url(#ig-icon-stroke)" />
+    <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" stroke="url(#ig-icon-stroke)" />
+    <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" stroke="url(#ig-icon-stroke)" />
+  </svg>
+);
+
+const Twitter = ({ className }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 22.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+  </svg>
+);
+
 export function Header({ title, subtitle }: HeaderProps) {
   const { user, logout } = useAuth();
-  const { toggleSidebar } = useUIStore();
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
+  const { toggleSidebar, sidebarOpen } = useUIStore();
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Close dropdown on outside click
@@ -64,7 +89,15 @@ export function Header({ title, subtitle }: HeaderProps) {
         title="Menú"
         onClick={toggleSidebar}
       >
-        <Menu className="w-5 h-5" aria-hidden="true" />
+        <div className="relative w-5 h-5">
+           {/* MOBILE: Menu / X */}
+           <Menu className={clsx("absolute inset-0 transition-transform duration-300 md:hidden", sidebarOpen ? "rotate-90 scale-0 opacity-0" : "rotate-0 scale-100 opacity-100")} />
+           <X className={clsx("absolute inset-0 transition-transform duration-300 md:hidden text-black", sidebarOpen ? "rotate-0 scale-100 opacity-100" : "-rotate-90 scale-0 opacity-0")} />
+           
+           {/* TABLET: ArrowRight / ArrowLeft */}
+           <ArrowRight className={clsx("absolute inset-0 transition-transform duration-300 hidden md:max-lg:block", sidebarOpen ? "rotate-180 scale-0 opacity-0" : "rotate-0 scale-100 opacity-100")} />
+           <ArrowLeft className={clsx("absolute inset-0 transition-transform duration-300 hidden md:max-lg:block", sidebarOpen ? "rotate-0 scale-100 opacity-100" : "-rotate-180 scale-0 opacity-0")} />
+        </div>
       </button>
 
       {/* Page title */}
@@ -84,6 +117,18 @@ export function Header({ title, subtitle }: HeaderProps) {
       >
         <HelpCircle className="w-5 h-5" />
         <span>Ayuda</span>
+      </div>
+
+      {/* Social links */}
+      <div className="hidden sm:flex items-center gap-2 mr-2">
+         <a href="https://instagram.com/prodeazo" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-black text-white text-[0.8rem] font-bold no-underline border border-[#fd1d1d]/55 hover:bg-white/[0.08] hover:border-[#fcb045]/70 transition-all duration-200">
+           <Instagram className="w-4 h-4 shrink-0" />
+           <span className="max-lg:hidden">¡Seguinos!</span>
+         </a>
+         <a href="https://x.com/prodeazo" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-black text-white text-[0.8rem] font-bold no-underline border border-white/30 hover:bg-white/[0.08] hover:border-white/50 transition-all duration-200">
+           <Twitter className="w-4 h-4 shrink-0 fill-current" />
+           <span className="max-lg:hidden">¡Seguinos!</span>
+         </a>
       </div>
 
       {/* User menu */}
@@ -115,26 +160,34 @@ export function Header({ title, subtitle }: HeaderProps) {
           />
         </button>
 
-        {menuOpen && (
-          <div className="absolute top-[calc(100%+8px)] right-0 min-w-[200px] max-w-[calc(100vw-32px)] bg-[#141414] border border-white/10 rounded-xl p-1.5 shadow-[0_12px_40px_rgba(0,0,0,0.5)] z-50 dropdown-in">
-            <Link
-              href="/settings"
-              className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg border-none bg-transparent text-white/75 text-[0.85rem] font-medium cursor-pointer transition-all duration-[150ms] w-full text-left no-underline hover:bg-white/[0.06] hover:text-white"
-              onClick={() => setMenuOpen(false)}
+        <AnimatePresence>
+          {menuOpen && (
+            <motion.div 
+              initial={{ opacity: 0, y: -4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.15, ease: "easeOut" }}
+              className="absolute top-[calc(100%+8px)] right-0 min-w-[200px] max-w-[calc(100vw-32px)] bg-[#141414] border border-white/10 rounded-xl p-1.5 shadow-[0_12px_40px_rgba(0,0,0,0.5)] z-50"
             >
-              <UserCircle className="w-[18px] h-[18px]" />
-              Ajustes de cuenta
-            </Link>
-            <button
-              className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg border-none bg-transparent text-[#D50204] text-[0.85rem] font-medium cursor-pointer transition-all duration-[150ms] w-full text-left hover:bg-[rgba(213,2,4,0.1)] hover:text-[#ff3b3b]"
-              onClick={handleLogout}
-              type="button"
-            >
-              <LogOut className="w-[18px] h-[18px]" />
-              Cerrar sesión
-            </button>
-          </div>
-        )}
+              <Link
+                href="/settings"
+                className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg border-none bg-transparent text-white/75 text-[0.85rem] font-medium cursor-pointer transition-all duration-[150ms] w-full text-left no-underline hover:bg-white/[0.06] hover:text-white"
+                onClick={() => setMenuOpen(false)}
+              >
+                <UserCircle className="w-[18px] h-[18px]" />
+                Ajustes de cuenta
+              </Link>
+              <button
+                className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg border-none bg-transparent text-[#D50204] text-[0.85rem] font-medium cursor-pointer transition-all duration-[150ms] w-full text-left hover:bg-[rgba(213,2,4,0.1)] hover:text-[#ff3b3b]"
+                onClick={handleLogout}
+                type="button"
+              >
+                <LogOut className="w-[18px] h-[18px]" />
+                Cerrar sesión
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </header>
   );

@@ -96,7 +96,7 @@ function ComingSoon({ title, description }: { title: string; description: string
 /* Shared input class builder */
 function fieldInputClass(hasError: boolean) {
   return clsx(
-    "w-full max-w-[400px] h-11 px-3.5 rounded-[10px] border bg-black/35 text-white text-[0.9rem] outline-none transition-[border-color,box-shadow] duration-200",
+    "w-full max-w-[400px] max-md:max-w-full h-11 px-3.5 rounded-[10px] border bg-black/35 text-white text-[0.9rem] outline-none transition-[border-color,box-shadow] duration-200",
     "focus:border-primary focus:shadow-[0_0_0_2px_rgba(175,232,5,0.15)]",
     "disabled:opacity-65 disabled:cursor-not-allowed",
     hasError
@@ -111,8 +111,8 @@ export default function SettingsPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [activeTab, setActiveTab] = useState<SettingsTab>("account");
 
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
+  const [firstName, setFirstName] = useState(() => user ? splitName(user.name).firstName : "");
+  const [lastName, setLastName] = useState(() => user ? splitName(user.name).lastName : "");
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<ToastState | null>(null);
 
@@ -315,15 +315,16 @@ export default function SettingsPage() {
           {toast && (
             <motion.div
               className={clsx(
-                "fixed top-7 right-7 z-[120] flex items-start gap-3.5 w-[min(420px,calc(100vw-56px))] p-4 rounded-[10px] overflow-hidden relative",
-                "shadow-[0_22px_60px_rgba(0,0,0,0.55),0_0_0_1px_rgba(255,255,255,0.04)_inset]",
+                "fixed z-[120] flex items-start gap-3.5 p-4 rounded-[10px] overflow-hidden shadow-[0_22px_60px_rgba(0,0,0,0.55),0_0_0_1px_rgba(255,255,255,0.04)_inset]",
+                "md:top-7 md:right-7 md:w-[min(420px,calc(100vw-56px))]",
+                "max-md:bottom-4 max-md:left-4 max-md:right-4 max-md:w-auto",
                 toast.tone === "success"
                   ? "bg-[#111a12] border border-[rgba(0,206,23,0.32)] text-[#f1fff5]"
                   : "bg-[#1e1112] border border-[rgba(213,2,4,0.36)] text-[#fff0f0]"
               )}
-              initial={{ opacity: 0, y: -16, scale: 0.96 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -12, scale: 0.98 }}
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.98 }}
               transition={{ duration: 0.22, ease: "easeOut" }}
               role="status"
             >
@@ -410,27 +411,29 @@ export default function SettingsPage() {
 
                     <div className="flex gap-8 items-start mb-7 max-[900px]:flex-col max-[900px]:items-center max-[900px]:text-center">
                       {/* Avatar */}
-                      <div className="relative shrink-0 w-[120px] h-[120px]">
-                        {user.avatar ? (
-                          <img
-                            src={user.avatar}
-                            alt={user.name}
-                            className="w-[120px] h-[120px] rounded-full object-cover border-2 border-white/10"
-                          />
-                        ) : (
-                          <span className="w-[120px] h-[120px] rounded-full flex items-center justify-center font-display text-[2rem] font-extrabold text-secondary bg-primary border-2 border-white/10">
-                            {getInitials(user.name)}
-                          </span>
-                        )}
-                        <button
-                          type="button"
-                          className="absolute right-0 bottom-0 w-9 h-9 rounded-full border-[3px] border-[#1a1a1a] bg-primary text-secondary flex items-center justify-center cursor-pointer transition-transform duration-200 z-10 hover:scale-110"
-                          onClick={handleAvatarChangeClick}
-                          title="Cambiar imagen"
-                          aria-label="Cambiar foto de perfil"
-                        >
-                          <Camera size={18} />
-                        </button>
+                      <div className="flex flex-col items-center shrink-0 w-[120px]">
+                        <div className="relative w-[120px] h-[120px]">
+                          {user.avatar ? (
+                            <img
+                              src={user.avatar}
+                              alt={user.name}
+                              className="w-[120px] h-[120px] rounded-full object-cover border-2 border-white/10"
+                            />
+                          ) : (
+                            <span className="w-[120px] h-[120px] rounded-full flex items-center justify-center font-display text-[2rem] font-extrabold text-secondary bg-primary border-2 border-white/10">
+                              {getInitials(user.name)}
+                            </span>
+                          )}
+                          <button
+                            type="button"
+                            className="absolute right-0 bottom-0 w-9 h-9 rounded-full border-[3px] border-[#1a1a1a] bg-primary text-secondary flex items-center justify-center cursor-pointer transition-transform duration-200 z-10 hover:scale-110"
+                            onClick={handleAvatarChangeClick}
+                            title="Cambiar imagen"
+                            aria-label="Cambiar foto de perfil"
+                          >
+                            <Camera size={18} />
+                          </button>
+                        </div>
                         <input
                           type="file"
                           ref={fileInputRef}
@@ -438,7 +441,7 @@ export default function SettingsPage() {
                           accept="image/*"
                           onChange={handleFileChange}
                         />
-                        <p className="text-[0.75rem] text-white/45 mt-2 max-w-[140px] leading-[1.35] max-[900px]:max-w-none max-[900px]:text-center">
+                        <p className="text-[0.75rem] text-white/45 mt-2 mb-0 max-w-[140px] leading-[1.35] max-[900px]:max-w-none max-[900px]:text-center max-md:mb-6 max-md:mt-4">
                           Cambiá tu imagen de perfil.
                         </p>
                       </div>
@@ -514,7 +517,7 @@ export default function SettingsPage() {
                     <div className="flex justify-center mt-2">
                       <button
                         type="submit"
-                        className="min-w-[220px] h-12 px-8 border-none rounded-[10px] bg-primary text-secondary text-[0.95rem] font-bold cursor-pointer transition-[opacity] duration-200 select-none flex items-center justify-center hover:enabled:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="min-w-[220px] max-md:w-full h-12 px-8 border-none rounded-[10px] bg-primary text-secondary text-[0.95rem] font-bold cursor-pointer transition-[opacity] duration-200 select-none flex items-center justify-center hover:enabled:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
                         disabled={saving || !isChanged || hasValidationErrors}
                       >
                         {saving ? (
@@ -535,7 +538,7 @@ export default function SettingsPage() {
                   </h2>
 
                   {/* Password row */}
-                  <div className="flex items-center justify-between gap-4 py-[18px] border-b border-white/[0.06] first:pt-0">
+                  <div className="flex items-center justify-between gap-4 py-[18px] border-b border-white/[0.06] first:pt-0 max-md:flex-col max-md:items-stretch">
                     <div className="flex-1 min-w-0">
                       <div className="text-[0.9rem] font-semibold text-white mb-1">
                         Contraseña
@@ -553,10 +556,10 @@ export default function SettingsPage() {
                     </div>
                     {canChangePassword ? (
                       <>
-                        <span className="text-[0.9rem] text-white/70 tracking-[0.08em]">••••••••••••</span>
+                        <span className="text-[0.9rem] text-white/70 tracking-[0.08em] max-md:hidden">••••••••••••</span>
                         <button
                           type="button"
-                          className="shrink-0 h-10 px-[18px] rounded-[10px] border border-white/20 bg-transparent text-white text-[0.85rem] font-semibold cursor-pointer transition-all duration-200 select-none hover:bg-white/[0.06] hover:border-white/35 disabled:opacity-45 disabled:cursor-not-allowed"
+                          className="shrink-0 h-10 px-[18px] rounded-[10px] border border-white/20 bg-transparent text-white text-[0.85rem] font-semibold cursor-pointer transition-all duration-200 select-none hover:bg-white/[0.06] hover:border-white/35 disabled:opacity-45 disabled:cursor-not-allowed max-md:w-full"
                           onClick={() => { setPasswordOpen(true); setPasswordError(null); }}
                         >
                           Cambiar contraseña
@@ -565,7 +568,7 @@ export default function SettingsPage() {
                     ) : (
                       <button
                         type="button"
-                        className="shrink-0 h-10 px-[18px] rounded-[10px] border border-white/20 bg-transparent text-white text-[0.85rem] font-semibold cursor-pointer transition-all duration-200 select-none disabled:opacity-45 disabled:cursor-not-allowed"
+                        className="shrink-0 h-10 px-[18px] rounded-[10px] border border-white/20 bg-transparent text-white text-[0.85rem] font-semibold cursor-pointer transition-all duration-200 select-none disabled:opacity-45 disabled:cursor-not-allowed max-md:w-full"
                         disabled
                       >
                         No disponible
@@ -574,21 +577,19 @@ export default function SettingsPage() {
                   </div>
 
                   {/* 2FA row */}
-                  <div className="flex items-center justify-between gap-4 py-[18px] last:border-b-0 last:pb-0">
-                    <div className="flex-1 min-w-0">
-                      <div className="text-[0.9rem] font-semibold text-white mb-1">
-                        Autenticación en dos pasos
-                      </div>
-                      <p className="text-[0.8rem] text-white/50 leading-[1.4]">
-                        Protegé tu cuenta con un segundo factor de verificación.
-                      </p>
+                  <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 py-[18px] last:border-b-0 last:pb-0 max-md:flex-col max-md:items-stretch">
+                    <div className="text-[0.9rem] font-semibold text-white md:flex-1 md:min-w-0">
+                      Autenticación en dos pasos
                     </div>
-                    <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[0.72rem] font-bold uppercase tracking-[0.03em] bg-white/[0.08] text-white/55">
+                    <p className="text-[0.8rem] text-white/50 leading-[1.4] basis-full max-md:order-3">
+                      Protegé tu cuenta con un segundo factor de verificación.
+                    </p>
+                    <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[0.72rem] font-bold uppercase tracking-[0.03em] bg-white/[0.08] text-white/55 max-md:order-2 max-md:w-fit">
                       Próximamente
                     </span>
                     <button
                       type="button"
-                      className="shrink-0 h-10 px-[18px] rounded-[10px] border border-white/20 bg-transparent text-white text-[0.85rem] font-semibold cursor-pointer transition-all duration-200 select-none disabled:opacity-45 disabled:cursor-not-allowed"
+                      className="shrink-0 h-10 px-[18px] rounded-[10px] border border-white/20 bg-transparent text-white text-[0.85rem] font-semibold cursor-pointer transition-all duration-200 select-none disabled:opacity-45 disabled:cursor-not-allowed max-md:order-4 max-md:w-full"
                       disabled
                     >
                       Gestionar
@@ -609,7 +610,7 @@ export default function SettingsPage() {
                     </p>
                     <button
                       type="button"
-                      className="shrink-0 h-10 px-[22px] rounded-[10px] border border-[rgba(213,2,4,0.6)] bg-transparent text-[#ff6b6b] text-[0.85rem] font-semibold cursor-pointer transition-all duration-200 select-none hover:bg-[rgba(213,2,4,0.1)] hover:border-[#ff6b6b]"
+                      className="shrink-0 h-10 px-[22px] rounded-[10px] border border-[rgba(213,2,4,0.6)] bg-transparent text-[#ff6b6b] text-[0.85rem] font-semibold cursor-pointer transition-all duration-200 select-none hover:bg-[rgba(213,2,4,0.1)] hover:border-[#ff6b6b] max-md:w-full"
                       onClick={handleDeleteAccount}
                     >
                       Eliminar mi cuenta

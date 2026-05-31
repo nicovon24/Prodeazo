@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   AlertCircle,
   CalendarDays,
@@ -106,7 +107,15 @@ function hasChanged(row: MatchRow): boolean {
 
 export default function PredictionsPage() {
   const activeTournamentId = useTournamentStore(s => s.activeTournamentId);
-  const [filter, setFilter] = useState<PredictionFilter>("all");
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get("tab") as PredictionFilter | null;
+
+  const [filter, setFilter] = useState<PredictionFilter>(() => {
+    if (tabParam && FILTERS.some(f => f.id === tabParam)) {
+      return tabParam;
+    }
+    return "all";
+  });
   const [selectedDate, setSelectedDate] = useState("all");
   const [matches, setMatches] = useState<MatchRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -137,6 +146,12 @@ export default function PredictionsPage() {
       };
     });
   }, []);
+
+  useEffect(() => {
+    if (tabParam && FILTERS.some(f => f.id === tabParam)) {
+      setFilter(tabParam);
+    }
+  }, [tabParam]);
 
   useEffect(() => {
     setLoading(true);
@@ -380,14 +395,16 @@ export default function PredictionsPage() {
           {toast && (
             <motion.div
               className={clsx(
-                "fixed top-7 right-7 z-[80] flex items-start gap-3.5 w-[min(420px,calc(100vw-56px))] p-4 rounded-[10px] shadow-[0_22px_60px_rgba(0,0,0,0.55),0_0_0_1px_rgba(255,255,255,0.04)_inset] overflow-hidden relative",
+                "fixed z-[80] flex items-start gap-3.5 p-4 rounded-[10px] shadow-[0_22px_60px_rgba(0,0,0,0.55),0_0_0_1px_rgba(255,255,255,0.04)_inset] overflow-hidden",
+                "md:top-7 md:right-7 md:w-[min(420px,calc(100vw-56px))]",
+                "max-md:bottom-4 max-md:left-4 max-md:right-4 max-md:w-auto",
                 toast.tone === "success"
                   ? "bg-[#111a12] border border-[rgba(0,206,23,0.32)] text-[#f1fff5] toast-bar-success"
                   : "bg-[#1e1112] border border-[rgba(213,2,4,0.36)] text-[#fff0f0] toast-bar-error"
               )}
-              initial={{ opacity: 0, y: -16, scale: 0.96 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -12, scale: 0.98 }}
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.98 }}
               transition={{ duration: 0.22, ease: "easeOut" }}
               role="status"
             >
