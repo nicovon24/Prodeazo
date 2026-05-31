@@ -550,7 +550,7 @@ export default function FixturePage() {
                   const pred = predByFixture.get(f.id);
                   const tone = getPredictionBadgeTone(f, pred);
                   return (
-                    <motion.div key={f.id} variants={fadeInUp} className="flex flex-col gap-3 p-3 bg-white/[0.02] rounded-lg mb-1 transition-colors duration-200 hover:bg-white/[0.05] sm:grid sm:[grid-template-columns:100px_minmax(0,1fr)_92px_92px] sm:gap-4 sm:p-4">
+                    <motion.div key={f.id} variants={fadeInUp} className="flex flex-col gap-3 p-3 bg-gradient-to-br from-white/[0.04] to-white/[0.01] rounded-lg mb-1 border border-white/[0.06] transition-all duration-200 hover:bg-white/[0.05] hover:border-white/[0.12] sm:grid sm:[grid-template-columns:100px_minmax(0,1fr)_92px_92px] sm:gap-4 sm:p-4">
                       <div className="flex flex-col gap-1 max-md:items-center max-md:text-center">
                         <span className="text-[1.05rem] font-bold text-white">
                           {f.date
