@@ -121,14 +121,14 @@ export function Header({ title, subtitle }: HeaderProps) {
 
       {/* Social links */}
       <div className="hidden sm:flex items-center gap-2 mr-2">
-         <a href="https://instagram.com/prodeazo" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-black text-white text-[0.8rem] font-bold no-underline border border-[#fd1d1d]/55 hover:bg-white/[0.08] hover:border-[#fcb045]/70 transition-all duration-200">
-           <Instagram className="w-4 h-4 shrink-0" />
-           <span className="max-lg:hidden">¡Seguinos!</span>
-         </a>
-         <a href="https://x.com/prodeazo" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-black text-white text-[0.8rem] font-bold no-underline border border-white/30 hover:bg-white/[0.08] hover:border-white/50 transition-all duration-200">
-           <Twitter className="w-4 h-4 shrink-0 fill-current" />
-           <span className="max-lg:hidden">¡Seguinos!</span>
-         </a>
+         <a href="https://instagram.com/prodeazo" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-black text-white text-[0.8rem] font-bold no-underline border border-white/30 hover:bg-white/[0.08] hover:border-white/50 transition-all duration-200 active:scale-95">
+            <Instagram className="w-4 h-4 shrink-0" />
+            <span className="max-lg:hidden">¡Seguinos!</span>
+          </a>
+          <a href="https://x.com/prodeazo" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-black text-white text-[0.8rem] font-bold no-underline border border-white/30 hover:bg-white/[0.08] hover:border-white/50 transition-all duration-200 active:scale-95">
+            <Twitter className="w-4 h-4 shrink-0 fill-current" />
+            <span className="max-lg:hidden">¡Seguinos!</span>
+          </a>
       </div>
 
       {/* User menu */}
