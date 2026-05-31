@@ -595,13 +595,13 @@ export default function FixturePage() {
               type="button"
               aria-label="Volver arriba"
               onClick={scrollToTop}
-              className="group fixed right-5 bottom-6 z-[90] flex h-11 w-11 items-center justify-center rounded-full border border-primary/40 bg-[#111]/95 text-primary shadow-[0_14px_40px_rgba(0,0,0,0.45)] backdrop-blur-md transition-colors duration-200 hover:bg-primary hover:text-black cursor-pointer"
+              className="fixed right-5 bottom-6 z-[90] flex h-11 w-11 items-center justify-center rounded-full bg-primary text-black shadow-[0_14px_40px_rgba(0,0,0,0.45)] cursor-pointer transition-all duration-200 hover:brightness-75 active:scale-90"
               initial={{ opacity: 0, y: -8, scale: 0.92 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -8, scale: 0.92 }}
               transition={{ duration: 0.18, ease: 'easeOut' }}
             >
-              <ArrowUp className="h-5 w-5 group-hover:text-black transition-colors duration-200" />
+              <ArrowUp className="h-5 w-5" />
             </motion.button>
           )}
         </AnimatePresence>
