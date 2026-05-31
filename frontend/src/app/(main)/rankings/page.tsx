@@ -123,7 +123,7 @@ export default function RankingsPage() {
   return (
     <>
       <Header
-        title="Ranking Global"
+        title="Rankings"
         subtitle="Medite contra todos los jugadores de Prodeazo."
       />
       <main className="flex-1 px-4 md:px-8 pt-4 md:pt-6 pb-4 md:pb-6 flex flex-col gap-4">
